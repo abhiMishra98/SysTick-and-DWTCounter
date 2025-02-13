@@ -1,0 +1,4517 @@
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.syntax unified
+  15              		.file	"timingAnalyzer.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text.SysTick_Handler,"ax",%progbits
+  20              		.align	2
+  21              		.global	SysTick_Handler
+  22              		.thumb
+  23              		.thumb_func
+  24              		.type	SysTick_Handler, %function
+  25              	SysTick_Handler:
+  26              	.LFB64:
+  27              		.file 1 "timingAnalyzer.c"
+   1:timingAnalyzer.c **** /* ========================================
+   2:timingAnalyzer.c ****  *
+   3:timingAnalyzer.c ****  * Copyright YOUR COMPANY, THE YEAR
+   4:timingAnalyzer.c ****  * All Rights Reserved
+   5:timingAnalyzer.c ****  * UNPUBLISHED, LICENSED SOFTWARE.
+   6:timingAnalyzer.c ****  *
+   7:timingAnalyzer.c ****  * CONFIDENTIAL AND PROPRIETARY INFORMATION
+   8:timingAnalyzer.c ****  * WHICH IS THE PROPERTY OF your company.
+   9:timingAnalyzer.c ****  *
+  10:timingAnalyzer.c ****  * ========================================
+  11:timingAnalyzer.c **** */
+  12:timingAnalyzer.c **** #include "timingAnalyzer.h"
+  13:timingAnalyzer.c **** #include <stdio.h>
+  14:timingAnalyzer.c **** #include <string.h>
+  15:timingAnalyzer.c **** 
+  16:timingAnalyzer.c **** static TimingAnalyzer_t analyzers[MAX_ANALYZERS];
+  17:timingAnalyzer.c **** static volatile uint32_t systickCounter = 0;
+  18:timingAnalyzer.c **** static uint32_t analyzerCount = 0;
+  19:timingAnalyzer.c **** 
+  20:timingAnalyzer.c **** void SysTick_Handler(void) {
+  28              		.loc 1 20 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  21:timingAnalyzer.c ****     systickCounter++;
+  33              		.loc 1 21 0
+  34 0000 024A     		ldr	r2, .L2
+  35 0002 1368     		ldr	r3, [r2]
+  36 0004 0133     		adds	r3, r3, #1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 2
+
+
+  37 0006 1360     		str	r3, [r2]
+  38 0008 7047     		bx	lr
+  39              	.L3:
+  40 000a 00BF     		.align	2
+  41              	.L2:
+  42 000c 00000000 		.word	.LANCHOR0
+  43              		.cfi_endproc
+  44              	.LFE64:
+  45              		.size	SysTick_Handler, .-SysTick_Handler
+  46              		.section	.text.TimingAnalyzer_RedLED,"ax",%progbits
+  47              		.align	2
+  48              		.global	TimingAnalyzer_RedLED
+  49              		.thumb
+  50              		.thumb_func
+  51              		.type	TimingAnalyzer_RedLED, %function
+  52              	TimingAnalyzer_RedLED:
+  53              	.LFB73:
+  22:timingAnalyzer.c **** }
+  23:timingAnalyzer.c **** 
+  24:timingAnalyzer.c **** // Pin control function pointers
+  25:timingAnalyzer.c **** static PinControl_t redLedControl;
+  26:timingAnalyzer.c **** static PinControl_t greenLedControl;
+  27:timingAnalyzer.c **** static PinControl_t yellowLedControl;
+  28:timingAnalyzer.c **** 
+  29:timingAnalyzer.c **** 
+  30:timingAnalyzer.c **** /*******************************************************************************
+  31:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Init
+  32:timingAnalyzer.c **** ****************************************************************************//**
+  33:timingAnalyzer.c **** *
+  34:timingAnalyzer.c ****  * Will initialise the DWT and SysTick Counters.
+  35:timingAnalyzer.c ****  *
+  36:timingAnalyzer.c ****  *
+  37:timingAnalyzer.c ****  * \return RC_SUCCESS if the initialisation was done.
+  38:timingAnalyzer.c **** *
+  39:timingAnalyzer.c **** *******************************************************************************/
+  40:timingAnalyzer.c **** RC_t TimingAnalyzer_Init(){
+  41:timingAnalyzer.c ****     //Initializing Systick counter.
+  42:timingAnalyzer.c ****     CySysTickInit();
+  43:timingAnalyzer.c ****     CySysTickSetCallback(0,SysTick_Handler);
+  44:timingAnalyzer.c ****     CySysTickSetReload(BCLK__BUS_CLK__HZ/1000 -1);
+  45:timingAnalyzer.c ****     
+  46:timingAnalyzer.c ****     //Initializing DWT counter
+  47:timingAnalyzer.c ****     CoreDebug-> DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  48:timingAnalyzer.c ****     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  49:timingAnalyzer.c ****     DWT->CYCCNT = 0;
+  50:timingAnalyzer.c ****     return RC_SUCCESS;
+  51:timingAnalyzer.c **** }
+  52:timingAnalyzer.c **** 
+  53:timingAnalyzer.c **** 
+  54:timingAnalyzer.c **** /*******************************************************************************
+  55:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Create
+  56:timingAnalyzer.c **** ****************************************************************************//**
+  57:timingAnalyzer.c **** *
+  58:timingAnalyzer.c ****  * Starts the timing analyzer.
+  59:timingAnalyzer.c ****  *
+  60:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+  61:timingAnalyzer.c ****  * \param TimerMode_t       		 : [IN] enum for the different modes available.
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 3
+
+
+  62:timingAnalyzer.c ****  * \param uint8_t pin	             : [IN] unsigned 8-bit value for the pin control.
+  63:timingAnalyzer.c ****  * \param const char* name           : [IN] name of the analyzer.
+  64:timingAnalyzer.c ****  *
+  65:timingAnalyzer.c ****  * \return RC_SUCCESS if analyser was created, RC_ERROR in case it was not.
+  66:timingAnalyzer.c **** *
+  67:timingAnalyzer.c **** *******************************************************************************/
+  68:timingAnalyzer.c **** RC_t TimingAnalyzer_Create(TimingAnalyzer_t *const me, TimerMode_t mode,uint8_t pin,const char* nam
+  69:timingAnalyzer.c ****     if(!me){
+  70:timingAnalyzer.c ****         return RC_ERROR;      
+  71:timingAnalyzer.c ****     }else{
+  72:timingAnalyzer.c ****         strcpy(me->name,name);
+  73:timingAnalyzer.c ****         me->mode = mode;
+  74:timingAnalyzer.c ****         me->pin = pin;
+  75:timingAnalyzer.c ****         me->state=STATE_CONFIGURED;
+  76:timingAnalyzer.c ****         me->startTime = 0;
+  77:timingAnalyzer.c ****         me->endTime = 0;
+  78:timingAnalyzer.c ****         me->totalTime = 0;
+  79:timingAnalyzer.c ****         me->cycleCount = 0;
+  80:timingAnalyzer.c ****    
+  81:timingAnalyzer.c ****         // Assign pin control based on pin number
+  82:timingAnalyzer.c ****         switch(pin) {
+  83:timingAnalyzer.c ****             case 0: me->pinControl = TimingAnalyzer_RedLED;
+  84:timingAnalyzer.c ****             break;
+  85:timingAnalyzer.c ****             case 1: me->pinControl = TimingAnalyzer_GreenLED;
+  86:timingAnalyzer.c ****             // UART_LOG_PutString("Het");
+  87:timingAnalyzer.c ****             break;
+  88:timingAnalyzer.c ****             case 2: me->pinControl = TimingAnalyzer_YellowLED; 
+  89:timingAnalyzer.c ****             break;
+  90:timingAnalyzer.c ****             default: me->pinControl = NULL;
+  91:timingAnalyzer.c ****         }
+  92:timingAnalyzer.c ****         me->isValid = true;
+  93:timingAnalyzer.c ****         return RC_SUCCESS;
+  94:timingAnalyzer.c ****     }
+  95:timingAnalyzer.c **** }
+  96:timingAnalyzer.c **** 
+  97:timingAnalyzer.c **** 
+  98:timingAnalyzer.c **** /*******************************************************************************
+  99:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Start
+ 100:timingAnalyzer.c **** ****************************************************************************//**
+ 101:timingAnalyzer.c **** *
+ 102:timingAnalyzer.c ****  * Starts the timing analyzer.
+ 103:timingAnalyzer.c **** *
+ 104:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+ 105:timingAnalyzer.c **** *
+ 106:timingAnalyzer.c ****  * \return RC_SUCCESS if the analyser was started only after being configured and not runnnig curre
+ 107:timingAnalyzer.c ****  *   If analyzer is paused, it should resume.
+ 108:timingAnalyzer.c ****  * \return RC_ERROR in case the current mode doesn't satisfy the above conditions.
+ 109:timingAnalyzer.c **** *
+ 110:timingAnalyzer.c **** *******************************************************************************/
+ 111:timingAnalyzer.c **** 
+ 112:timingAnalyzer.c **** RC_t TimingAnalyzer_Start(TimingAnalyzer_t *const me){
+ 113:timingAnalyzer.c ****     if(me->state == 0){
+ 114:timingAnalyzer.c ****         if(me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN){
+ 115:timingAnalyzer.c ****              DWT->CYCCNT =0; // Reset the counter at start
+ 116:timingAnalyzer.c ****              me->startTime = DWT->CYCCNT;
+ 117:timingAnalyzer.c ****         }else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 118:timingAnalyzer.c ****             CySysTickEnable();
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 4
+
+
+ 119:timingAnalyzer.c ****             systickCounter = 0;  // Reset the counter at start
+ 120:timingAnalyzer.c ****             me->startTime = systickCounter;
+ 121:timingAnalyzer.c ****         }
+ 122:timingAnalyzer.c ****          me->state = STATE_START;
+ 123:timingAnalyzer.c ****         // Set pin if applicable
+ 124:timingAnalyzer.c ****         if (me->pinControl && (me->mode == MODE_DWT_COUNTER_PIN || 
+ 125:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 126:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 127:timingAnalyzer.c ****             me->pinControl(1);
+ 128:timingAnalyzer.c ****         }
+ 129:timingAnalyzer.c ****         me->state = STATE_START;          
+ 130:timingAnalyzer.c ****         return RC_SUCCESS;
+ 131:timingAnalyzer.c ****     }
+ 132:timingAnalyzer.c ****     else
+ 133:timingAnalyzer.c ****     {
+ 134:timingAnalyzer.c ****         UART_LOG_PutString("Invalid State\r\n");
+ 135:timingAnalyzer.c ****         return RC_ERROR;
+ 136:timingAnalyzer.c ****     }
+ 137:timingAnalyzer.c ****     
+ 138:timingAnalyzer.c **** }
+ 139:timingAnalyzer.c **** 
+ 140:timingAnalyzer.c **** 
+ 141:timingAnalyzer.c **** /*******************************************************************************
+ 142:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Stop
+ 143:timingAnalyzer.c **** ****************************************************************************//**
+ 144:timingAnalyzer.c **** *
+ 145:timingAnalyzer.c ****  * Stops the timing analyzer.
+ 146:timingAnalyzer.c ****  *
+ 147:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+ 148:timingAnalyzer.c ****  *
+ 149:timingAnalyzer.c ****  * \return RC_SUCCESS if the analyser was stopped either from a running or a pause condition.
+ 150:timingAnalyzer.c ****  * \return RC_ERROR in case the current mode doesn't satisfy the above conditions.
+ 151:timingAnalyzer.c **** *
+ 152:timingAnalyzer.c **** *******************************************************************************/
+ 153:timingAnalyzer.c **** RC_t TimingAnalyzer_Stop(TimingAnalyzer_t* me){
+ 154:timingAnalyzer.c ****     if(me->state == 1 || me->state == 3){
+ 155:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 156:timingAnalyzer.c ****              me->cycleCount+=me->startTime+DWT->CYCCNT;
+ 157:timingAnalyzer.c ****              float ms = me->cycleCount / (float)(BCLK__BUS_CLK__HZ/1000);
+ 158:timingAnalyzer.c ****              me->totalTimeDWT = ms;
+ 159:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 160:timingAnalyzer.c ****             me->totalTime+=me->startTime+systickCounter;
+ 161:timingAnalyzer.c ****         }
+ 162:timingAnalyzer.c ****       
+ 163:timingAnalyzer.c ****         if (me->pinControl && (me->mode == MODE_DWT_COUNTER_PIN || 
+ 164:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 165:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) 
+ 166:timingAnalyzer.c ****         {
+ 167:timingAnalyzer.c ****             me->pinControl(0);
+ 168:timingAnalyzer.c ****         }
+ 169:timingAnalyzer.c ****         me->state = STATE_STOP;   
+ 170:timingAnalyzer.c ****         analyzers[analyzerCount] = *me;
+ 171:timingAnalyzer.c ****         analyzerCount ++;
+ 172:timingAnalyzer.c ****         return RC_SUCCESS;
+ 173:timingAnalyzer.c ****     }
+ 174:timingAnalyzer.c ****     else
+ 175:timingAnalyzer.c ****     {
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 5
+
+
+ 176:timingAnalyzer.c ****         UART_LOG_PutString("Invalid State\r\n");
+ 177:timingAnalyzer.c ****         return RC_ERROR;
+ 178:timingAnalyzer.c ****     }
+ 179:timingAnalyzer.c **** }
+ 180:timingAnalyzer.c **** 
+ 181:timingAnalyzer.c **** 
+ 182:timingAnalyzer.c **** /*******************************************************************************
+ 183:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Pause
+ 184:timingAnalyzer.c **** ****************************************************************************//**
+ 185:timingAnalyzer.c **** *
+ 186:timingAnalyzer.c ****  * Pauses the timing analyzer.
+ 187:timingAnalyzer.c ****  *
+ 188:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+ 189:timingAnalyzer.c ****  *
+ 190:timingAnalyzer.c ****  * \return RC_SUCCESS if the analyser was paused from a running condition.
+ 191:timingAnalyzer.c ****  * \return RC_ERROR in case the current mode doesn't satisfy the above conditions.
+ 192:timingAnalyzer.c **** *
+ 193:timingAnalyzer.c **** *******************************************************************************/
+ 194:timingAnalyzer.c **** RC_t TimingAnalyzer_Pause(TimingAnalyzer_t* me){
+ 195:timingAnalyzer.c ****     if(me->state == 1){
+ 196:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 197:timingAnalyzer.c ****             DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk; //Negating the mask and doing an AND operation wi
+ 198:timingAnalyzer.c ****             me->startTime += DWT->CYCCNT;
+ 199:timingAnalyzer.c ****             DWT->CYCCNT = 0;
+ 200:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 201:timingAnalyzer.c ****             CySysTickStop();
+ 202:timingAnalyzer.c ****             me->startTime += systickCounter;
+ 203:timingAnalyzer.c ****             systickCounter = 0;
+ 204:timingAnalyzer.c ****         }
+ 205:timingAnalyzer.c ****       
+ 206:timingAnalyzer.c ****         if (me->pinControl && (me->mode == MODE_DWT_COUNTER_PIN || 
+ 207:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 208:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 209:timingAnalyzer.c ****             me->pinControl(0);
+ 210:timingAnalyzer.c ****         }
+ 211:timingAnalyzer.c ****         me->state = STATE_PAUSE;   
+ 212:timingAnalyzer.c ****         return RC_SUCCESS;
+ 213:timingAnalyzer.c ****     }
+ 214:timingAnalyzer.c ****     else
+ 215:timingAnalyzer.c ****     {
+ 216:timingAnalyzer.c ****         UART_LOG_PutString("Invalid State\r\n");
+ 217:timingAnalyzer.c ****         return RC_ERROR;
+ 218:timingAnalyzer.c ****     }
+ 219:timingAnalyzer.c **** }
+ 220:timingAnalyzer.c **** 
+ 221:timingAnalyzer.c **** 
+ 222:timingAnalyzer.c **** /*******************************************************************************
+ 223:timingAnalyzer.c **** * Function Name: TimingAnalyzer_Resume
+ 224:timingAnalyzer.c **** ****************************************************************************//**
+ 225:timingAnalyzer.c **** *
+ 226:timingAnalyzer.c ****  * Resumes the timing analyzer.
+ 227:timingAnalyzer.c ****  *
+ 228:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+ 229:timingAnalyzer.c ****  *
+ 230:timingAnalyzer.c ****  * \return RC_SUCCESS if the analyser was resumed from a pause condition.
+ 231:timingAnalyzer.c ****  * \return RC_ERROR in case the current mode doesn't satisfy the above conditions.
+ 232:timingAnalyzer.c **** *
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 6
+
+
+ 233:timingAnalyzer.c **** *******************************************************************************/
+ 234:timingAnalyzer.c **** RC_t TimingAnalyzer_Resume(TimingAnalyzer_t* me){
+ 235:timingAnalyzer.c ****     if(me->state == 3){
+ 236:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 237:timingAnalyzer.c ****             DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;  //Enabling the clock by an OR operation with the 
+ 238:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 239:timingAnalyzer.c ****             CySysTickEnable();
+ 240:timingAnalyzer.c ****         }
+ 241:timingAnalyzer.c ****       
+ 242:timingAnalyzer.c ****         if (me->pinControl && (me->mode == MODE_DWT_COUNTER_PIN || 
+ 243:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 244:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 245:timingAnalyzer.c ****             me->pinControl(1);
+ 246:timingAnalyzer.c ****         }
+ 247:timingAnalyzer.c ****         me->state = STATE_START;   
+ 248:timingAnalyzer.c ****         return RC_SUCCESS;
+ 249:timingAnalyzer.c ****     }
+ 250:timingAnalyzer.c ****     else
+ 251:timingAnalyzer.c ****     {
+ 252:timingAnalyzer.c ****         UART_LOG_PutString("Invalid State\r\n");
+ 253:timingAnalyzer.c ****         return RC_ERROR;
+ 254:timingAnalyzer.c ****     }
+ 255:timingAnalyzer.c **** }
+ 256:timingAnalyzer.c **** 
+ 257:timingAnalyzer.c **** 
+ 258:timingAnalyzer.c **** /*******************************************************************************
+ 259:timingAnalyzer.c **** * Function Name: TimingAnalyzer_PrintSingle
+ 260:timingAnalyzer.c **** ****************************************************************************//**
+ 261:timingAnalyzer.c **** *
+ 262:timingAnalyzer.c ****  * Resumes the timing analyzer.
+ 263:timingAnalyzer.c ****  *
+ 264:timingAnalyzer.c ****  * \param TimingAnalyzer_t *const me : [IN] the object of the timingAnalyzer struct.
+ 265:timingAnalyzer.c ****  *
+ 266:timingAnalyzer.c ****  * \return RC_SUCCESS if print was successful.
+ 267:timingAnalyzer.c **** *
+ 268:timingAnalyzer.c **** *******************************************************************************/
+ 269:timingAnalyzer.c **** RC_t TimingAnalyzer_PrintSingle(TimingAnalyzer_t *const me){
+ 270:timingAnalyzer.c ****     char buffer[128] = {0};
+ 271:timingAnalyzer.c ****     UART_LOG_PutString("\r\n");
+ 272:timingAnalyzer.c ****     UART_LOG_PutString(me->name);     //Prints the name of the timing analyzer.
+ 273:timingAnalyzer.c ****     
+ 274:timingAnalyzer.c ****     // Prints the timing information based on mode.
+ 275:timingAnalyzer.c ****     if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN){   
+ 276:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer),"\r\n%s :","Elapsed CPU Cycles"); 
+ 277:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer), "%u", me->cycleCount);
+ 278:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer),"\r\n%s :","Elapsed time");
+ 279:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer), "%d.%06d ms \r\n",(int)me->totalTimeDWT, (int)((me->totalTime
+ 280:timingAnalyzer.c ****     } 
+ 281:timingAnalyzer.c ****     else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) 
+ 282:timingAnalyzer.c ****     {
+ 283:timingAnalyzer.c ****         sprintf(buffer + strlen(buffer),"\r\n%s :","Elapsed time"); 
+ 284:timingAnalyzer.c ****         sprintf(buffer + strlen(buffer), "%d ms\r\n", me->totalTime);
+ 285:timingAnalyzer.c ****     }
+ 286:timingAnalyzer.c ****     UART_LOG_PutString(buffer);
+ 287:timingAnalyzer.c ****     return RC_SUCCESS;
+ 288:timingAnalyzer.c **** }
+ 289:timingAnalyzer.c **** 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 7
+
+
+ 290:timingAnalyzer.c **** 
+ 291:timingAnalyzer.c **** /*******************************************************************************
+ 292:timingAnalyzer.c **** * Function Name: TimingAnalyzer_PrintAll
+ 293:timingAnalyzer.c **** ****************************************************************************//**
+ 294:timingAnalyzer.c **** *
+ 295:timingAnalyzer.c ****  * Prints the timing analyzer.
+ 296:timingAnalyzer.c ****  *
+ 297:timingAnalyzer.c ****  *
+ 298:timingAnalyzer.c ****  * \return RC_SUCCESS if print was successful.
+ 299:timingAnalyzer.c **** *
+ 300:timingAnalyzer.c **** *******************************************************************************/
+ 301:timingAnalyzer.c **** RC_t TimingAnalyzer_PrintAll(void) {
+ 302:timingAnalyzer.c ****     
+ 303:timingAnalyzer.c ****     UART_LOG_PutString ("\r\n Printing all analyzer data : \r\n");
+ 304:timingAnalyzer.c ****     for (uint32_t i = 0; i < MAX_ANALYZERS; i++) {
+ 305:timingAnalyzer.c ****         if (analyzers[i].isValid) {
+ 306:timingAnalyzer.c ****             TimingAnalyzer_PrintSingle(&analyzers[i]);
+ 307:timingAnalyzer.c ****         }
+ 308:timingAnalyzer.c ****     }
+ 309:timingAnalyzer.c ****     return RC_SUCCESS;
+ 310:timingAnalyzer.c **** }
+ 311:timingAnalyzer.c **** 
+ 312:timingAnalyzer.c **** 
+ 313:timingAnalyzer.c **** /*******************************************************************************
+ 314:timingAnalyzer.c **** * Function Name: TimingAnalyzer_RedLED
+ 315:timingAnalyzer.c **** ****************************************************************************//**
+ 316:timingAnalyzer.c **** *
+ 317:timingAnalyzer.c ****  * Turns the Red LED ON/OFF.
+ 318:timingAnalyzer.c ****  *
+ 319:timingAnalyzer.c ****  *
+ 320:timingAnalyzer.c ****  * \return RC_SUCCESS if print was successful.
+ 321:timingAnalyzer.c **** *
+ 322:timingAnalyzer.c **** *******************************************************************************/
+ 323:timingAnalyzer.c **** void TimingAnalyzer_RedLED(uint8_t value){
+  54              		.loc 1 323 0
+  55              		.cfi_startproc
+  56              		@ args = 0, pretend = 0, frame = 0
+  57              		@ frame_needed = 0, uses_anonymous_args = 0
+  58              	.LVL0:
+  59 0000 08B5     		push	{r3, lr}
+  60              		.cfi_def_cfa_offset 8
+  61              		.cfi_offset 3, -8
+  62              		.cfi_offset 14, -4
+ 324:timingAnalyzer.c ****     if(value){
+  63              		.loc 1 324 0
+  64 0002 10B1     		cbz	r0, .L5
+ 325:timingAnalyzer.c ****         Red_LED_Write(value);
+  65              		.loc 1 325 0
+  66 0004 FFF7FEFF 		bl	Red_LED_Write
+  67              	.LVL1:
+  68 0008 08BD     		pop	{r3, pc}
+  69              	.LVL2:
+  70              	.L5:
+ 326:timingAnalyzer.c ****     }
+ 327:timingAnalyzer.c ****     else{
+ 328:timingAnalyzer.c ****         Red_LED_Write(0);
+  71              		.loc 1 328 0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 8
+
+
+  72 000a 0020     		movs	r0, #0
+  73              	.LVL3:
+  74 000c FFF7FEFF 		bl	Red_LED_Write
+  75              	.LVL4:
+  76 0010 08BD     		pop	{r3, pc}
+  77              		.cfi_endproc
+  78              	.LFE73:
+  79              		.size	TimingAnalyzer_RedLED, .-TimingAnalyzer_RedLED
+  80 0012 00BF     		.section	.text.TimingAnalyzer_GreenLED,"ax",%progbits
+  81              		.align	2
+  82              		.global	TimingAnalyzer_GreenLED
+  83              		.thumb
+  84              		.thumb_func
+  85              		.type	TimingAnalyzer_GreenLED, %function
+  86              	TimingAnalyzer_GreenLED:
+  87              	.LFB74:
+ 329:timingAnalyzer.c ****     }
+ 330:timingAnalyzer.c **** }
+ 331:timingAnalyzer.c **** 
+ 332:timingAnalyzer.c **** 
+ 333:timingAnalyzer.c **** /*******************************************************************************
+ 334:timingAnalyzer.c **** * Function Name: TimingAnalyzer_GreenLED
+ 335:timingAnalyzer.c **** ****************************************************************************//**
+ 336:timingAnalyzer.c **** *
+ 337:timingAnalyzer.c ****  * Turns the Green LED ON/OFF.
+ 338:timingAnalyzer.c ****  *
+ 339:timingAnalyzer.c ****  *
+ 340:timingAnalyzer.c **** *
+ 341:timingAnalyzer.c **** *******************************************************************************/
+ 342:timingAnalyzer.c **** void TimingAnalyzer_GreenLED(uint8_t value){
+  88              		.loc 1 342 0
+  89              		.cfi_startproc
+  90              		@ args = 0, pretend = 0, frame = 0
+  91              		@ frame_needed = 0, uses_anonymous_args = 0
+  92              	.LVL5:
+  93 0000 08B5     		push	{r3, lr}
+  94              		.cfi_def_cfa_offset 8
+  95              		.cfi_offset 3, -8
+  96              		.cfi_offset 14, -4
+ 343:timingAnalyzer.c ****     if(value){
+  97              		.loc 1 343 0
+  98 0002 10B1     		cbz	r0, .L9
+ 344:timingAnalyzer.c ****         Green_LED_Write(value);
+  99              		.loc 1 344 0
+ 100 0004 FFF7FEFF 		bl	Green_LED_Write
+ 101              	.LVL6:
+ 102 0008 08BD     		pop	{r3, pc}
+ 103              	.LVL7:
+ 104              	.L9:
+ 345:timingAnalyzer.c ****     }
+ 346:timingAnalyzer.c ****     else{
+ 347:timingAnalyzer.c ****         Green_LED_Write(0);
+ 105              		.loc 1 347 0
+ 106 000a 0020     		movs	r0, #0
+ 107              	.LVL8:
+ 108 000c FFF7FEFF 		bl	Green_LED_Write
+ 109              	.LVL9:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 9
+
+
+ 110 0010 08BD     		pop	{r3, pc}
+ 111              		.cfi_endproc
+ 112              	.LFE74:
+ 113              		.size	TimingAnalyzer_GreenLED, .-TimingAnalyzer_GreenLED
+ 114 0012 00BF     		.section	.text.TimingAnalyzer_YellowLED,"ax",%progbits
+ 115              		.align	2
+ 116              		.global	TimingAnalyzer_YellowLED
+ 117              		.thumb
+ 118              		.thumb_func
+ 119              		.type	TimingAnalyzer_YellowLED, %function
+ 120              	TimingAnalyzer_YellowLED:
+ 121              	.LFB75:
+ 348:timingAnalyzer.c ****     }
+ 349:timingAnalyzer.c **** }
+ 350:timingAnalyzer.c **** 
+ 351:timingAnalyzer.c **** 
+ 352:timingAnalyzer.c **** /*******************************************************************************
+ 353:timingAnalyzer.c **** * Function Name: TimingAnalyzer_YellowLED
+ 354:timingAnalyzer.c **** ****************************************************************************//**
+ 355:timingAnalyzer.c **** *
+ 356:timingAnalyzer.c ****  * Turns the Yellow LED ON/OFF.
+ 357:timingAnalyzer.c ****  *
+ 358:timingAnalyzer.c ****  *
+ 359:timingAnalyzer.c **** *
+ 360:timingAnalyzer.c **** *******************************************************************************/
+ 361:timingAnalyzer.c **** void TimingAnalyzer_YellowLED(uint8_t value){
+ 122              		.loc 1 361 0
+ 123              		.cfi_startproc
+ 124              		@ args = 0, pretend = 0, frame = 0
+ 125              		@ frame_needed = 0, uses_anonymous_args = 0
+ 126              	.LVL10:
+ 127 0000 08B5     		push	{r3, lr}
+ 128              		.cfi_def_cfa_offset 8
+ 129              		.cfi_offset 3, -8
+ 130              		.cfi_offset 14, -4
+ 362:timingAnalyzer.c ****     if(value){
+ 131              		.loc 1 362 0
+ 132 0002 10B1     		cbz	r0, .L13
+ 363:timingAnalyzer.c ****         Yellow_LED_Write(value);
+ 133              		.loc 1 363 0
+ 134 0004 FFF7FEFF 		bl	Yellow_LED_Write
+ 135              	.LVL11:
+ 136 0008 08BD     		pop	{r3, pc}
+ 137              	.LVL12:
+ 138              	.L13:
+ 364:timingAnalyzer.c ****     }
+ 365:timingAnalyzer.c ****     else{
+ 366:timingAnalyzer.c ****         Yellow_LED_Write(0);
+ 139              		.loc 1 366 0
+ 140 000a 0020     		movs	r0, #0
+ 141              	.LVL13:
+ 142 000c FFF7FEFF 		bl	Yellow_LED_Write
+ 143              	.LVL14:
+ 144 0010 08BD     		pop	{r3, pc}
+ 145              		.cfi_endproc
+ 146              	.LFE75:
+ 147              		.size	TimingAnalyzer_YellowLED, .-TimingAnalyzer_YellowLED
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 10
+
+
+ 148 0012 00BF     		.section	.text.TimingAnalyzer_Init,"ax",%progbits
+ 149              		.align	2
+ 150              		.global	TimingAnalyzer_Init
+ 151              		.thumb
+ 152              		.thumb_func
+ 153              		.type	TimingAnalyzer_Init, %function
+ 154              	TimingAnalyzer_Init:
+ 155              	.LFB65:
+  40:timingAnalyzer.c ****     //Initializing Systick counter.
+ 156              		.loc 1 40 0
+ 157              		.cfi_startproc
+ 158              		@ args = 0, pretend = 0, frame = 0
+ 159              		@ frame_needed = 0, uses_anonymous_args = 0
+ 160 0000 08B5     		push	{r3, lr}
+ 161              		.cfi_def_cfa_offset 8
+ 162              		.cfi_offset 3, -8
+ 163              		.cfi_offset 14, -4
+  42:timingAnalyzer.c ****     CySysTickSetCallback(0,SysTick_Handler);
+ 164              		.loc 1 42 0
+ 165 0002 FFF7FEFF 		bl	CySysTickInit
+ 166              	.LVL15:
+  43:timingAnalyzer.c ****     CySysTickSetReload(BCLK__BUS_CLK__HZ/1000 -1);
+ 167              		.loc 1 43 0
+ 168 0006 0A49     		ldr	r1, .L18
+ 169 0008 0020     		movs	r0, #0
+ 170 000a FFF7FEFF 		bl	CySysTickSetCallback
+ 171              	.LVL16:
+  44:timingAnalyzer.c ****     
+ 172              		.loc 1 44 0
+ 173 000e 45F6BF50 		movw	r0, #23999
+ 174 0012 FFF7FEFF 		bl	CySysTickSetReload
+ 175              	.LVL17:
+  47:timingAnalyzer.c ****     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+ 176              		.loc 1 47 0
+ 177 0016 074A     		ldr	r2, .L18+4
+ 178 0018 D368     		ldr	r3, [r2, #12]
+ 179 001a 43F08073 		orr	r3, r3, #16777216
+ 180 001e D360     		str	r3, [r2, #12]
+  48:timingAnalyzer.c ****     DWT->CYCCNT = 0;
+ 181              		.loc 1 48 0
+ 182 0020 054B     		ldr	r3, .L18+8
+ 183 0022 1A68     		ldr	r2, [r3]
+ 184 0024 42F00102 		orr	r2, r2, #1
+ 185 0028 1A60     		str	r2, [r3]
+  49:timingAnalyzer.c ****     return RC_SUCCESS;
+ 186              		.loc 1 49 0
+ 187 002a 0020     		movs	r0, #0
+ 188 002c 5860     		str	r0, [r3, #4]
+  51:timingAnalyzer.c **** 
+ 189              		.loc 1 51 0
+ 190 002e 08BD     		pop	{r3, pc}
+ 191              	.L19:
+ 192              		.align	2
+ 193              	.L18:
+ 194 0030 00000000 		.word	SysTick_Handler
+ 195 0034 F0ED00E0 		.word	-536810000
+ 196 0038 001000E0 		.word	-536866816
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 11
+
+
+ 197              		.cfi_endproc
+ 198              	.LFE65:
+ 199              		.size	TimingAnalyzer_Init, .-TimingAnalyzer_Init
+ 200              		.section	.text.TimingAnalyzer_Create,"ax",%progbits
+ 201              		.align	2
+ 202              		.global	TimingAnalyzer_Create
+ 203              		.thumb
+ 204              		.thumb_func
+ 205              		.type	TimingAnalyzer_Create, %function
+ 206              	TimingAnalyzer_Create:
+ 207              	.LFB66:
+  68:timingAnalyzer.c ****     if(!me){
+ 208              		.loc 1 68 0
+ 209              		.cfi_startproc
+ 210              		@ args = 0, pretend = 0, frame = 0
+ 211              		@ frame_needed = 0, uses_anonymous_args = 0
+ 212              	.LVL18:
+  69:timingAnalyzer.c ****         return RC_ERROR;      
+ 213              		.loc 1 69 0
+ 214 0000 38B3     		cbz	r0, .L27
+  68:timingAnalyzer.c ****     if(!me){
+ 215              		.loc 1 68 0
+ 216 0002 70B5     		push	{r4, r5, r6, lr}
+ 217              		.cfi_def_cfa_offset 16
+ 218              		.cfi_offset 4, -16
+ 219              		.cfi_offset 5, -12
+ 220              		.cfi_offset 6, -8
+ 221              		.cfi_offset 14, -4
+ 222 0004 0446     		mov	r4, r0
+ 223 0006 1546     		mov	r5, r2
+ 224 0008 0E46     		mov	r6, r1
+  72:timingAnalyzer.c ****         me->mode = mode;
+ 225              		.loc 1 72 0
+ 226 000a 1946     		mov	r1, r3
+ 227              	.LVL19:
+ 228 000c FFF7FEFF 		bl	strcpy
+ 229              	.LVL20:
+  73:timingAnalyzer.c ****         me->pin = pin;
+ 230              		.loc 1 73 0
+ 231 0010 84F82060 		strb	r6, [r4, #32]
+  74:timingAnalyzer.c ****         me->state=STATE_CONFIGURED;
+ 232              		.loc 1 74 0
+ 233 0014 84F82150 		strb	r5, [r4, #33]
+  75:timingAnalyzer.c ****         me->startTime = 0;
+ 234              		.loc 1 75 0
+ 235 0018 0023     		movs	r3, #0
+ 236 001a 84F82230 		strb	r3, [r4, #34]
+  76:timingAnalyzer.c ****         me->endTime = 0;
+ 237              		.loc 1 76 0
+ 238 001e 6362     		str	r3, [r4, #36]
+  77:timingAnalyzer.c ****         me->totalTime = 0;
+ 239              		.loc 1 77 0
+ 240 0020 A362     		str	r3, [r4, #40]
+  78:timingAnalyzer.c ****         me->cycleCount = 0;
+ 241              		.loc 1 78 0
+ 242 0022 2363     		str	r3, [r4, #48]
+  79:timingAnalyzer.c ****    
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 12
+
+
+ 243              		.loc 1 79 0
+ 244 0024 A363     		str	r3, [r4, #56]
+  82:timingAnalyzer.c ****             case 0: me->pinControl = TimingAnalyzer_RedLED;
+ 245              		.loc 1 82 0
+ 246 0026 012D     		cmp	r5, #1
+ 247 0028 06D0     		beq	.L23
+ 248 002a 15B1     		cbz	r5, .L24
+ 249 002c 022D     		cmp	r5, #2
+ 250 002e 06D0     		beq	.L25
+ 251 0030 08E0     		b	.L28
+ 252              	.L24:
+  83:timingAnalyzer.c ****             break;
+ 253              		.loc 1 83 0
+ 254 0032 094B     		ldr	r3, .L31
+ 255 0034 E362     		str	r3, [r4, #44]
+  84:timingAnalyzer.c ****             case 1: me->pinControl = TimingAnalyzer_GreenLED;
+ 256              		.loc 1 84 0
+ 257 0036 07E0     		b	.L26
+ 258              	.L23:
+  85:timingAnalyzer.c ****             // UART_LOG_PutString("Het");
+ 259              		.loc 1 85 0
+ 260 0038 084B     		ldr	r3, .L31+4
+ 261 003a E362     		str	r3, [r4, #44]
+  87:timingAnalyzer.c ****             case 2: me->pinControl = TimingAnalyzer_YellowLED; 
+ 262              		.loc 1 87 0
+ 263 003c 04E0     		b	.L26
+ 264              	.L25:
+  88:timingAnalyzer.c ****             break;
+ 265              		.loc 1 88 0
+ 266 003e 084B     		ldr	r3, .L31+8
+ 267 0040 E362     		str	r3, [r4, #44]
+  89:timingAnalyzer.c ****             default: me->pinControl = NULL;
+ 268              		.loc 1 89 0
+ 269 0042 01E0     		b	.L26
+ 270              	.L28:
+  90:timingAnalyzer.c ****         }
+ 271              		.loc 1 90 0
+ 272 0044 0023     		movs	r3, #0
+ 273 0046 E362     		str	r3, [r4, #44]
+ 274              	.L26:
+  92:timingAnalyzer.c ****         return RC_SUCCESS;
+ 275              		.loc 1 92 0
+ 276 0048 0123     		movs	r3, #1
+ 277 004a 84F83C30 		strb	r3, [r4, #60]
+  93:timingAnalyzer.c ****     }
+ 278              		.loc 1 93 0
+ 279 004e 0020     		movs	r0, #0
+ 280 0050 70BD     		pop	{r4, r5, r6, pc}
+ 281              	.LVL21:
+ 282              	.L27:
+ 283              		.cfi_def_cfa_offset 0
+ 284              		.cfi_restore 4
+ 285              		.cfi_restore 5
+ 286              		.cfi_restore 6
+ 287              		.cfi_restore 14
+  70:timingAnalyzer.c ****     }else{
+ 288              		.loc 1 70 0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 13
+
+
+ 289 0052 0120     		movs	r0, #1
+ 290              	.LVL22:
+ 291 0054 7047     		bx	lr
+ 292              	.L32:
+ 293 0056 00BF     		.align	2
+ 294              	.L31:
+ 295 0058 00000000 		.word	TimingAnalyzer_RedLED
+ 296 005c 00000000 		.word	TimingAnalyzer_GreenLED
+ 297 0060 00000000 		.word	TimingAnalyzer_YellowLED
+ 298              		.cfi_endproc
+ 299              	.LFE66:
+ 300              		.size	TimingAnalyzer_Create, .-TimingAnalyzer_Create
+ 301              		.section	.text.TimingAnalyzer_Start,"ax",%progbits
+ 302              		.align	2
+ 303              		.global	TimingAnalyzer_Start
+ 304              		.thumb
+ 305              		.thumb_func
+ 306              		.type	TimingAnalyzer_Start, %function
+ 307              	TimingAnalyzer_Start:
+ 308              	.LFB67:
+ 112:timingAnalyzer.c ****     if(me->state == 0){
+ 309              		.loc 1 112 0
+ 310              		.cfi_startproc
+ 311              		@ args = 0, pretend = 0, frame = 0
+ 312              		@ frame_needed = 0, uses_anonymous_args = 0
+ 313              	.LVL23:
+ 314 0000 10B5     		push	{r4, lr}
+ 315              		.cfi_def_cfa_offset 8
+ 316              		.cfi_offset 4, -8
+ 317              		.cfi_offset 14, -4
+ 113:timingAnalyzer.c ****         if(me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN){
+ 318              		.loc 1 113 0
+ 319 0002 90F82230 		ldrb	r3, [r0, #34]	@ zero_extendqisi2
+ 320 0006 4BBB     		cbnz	r3, .L34
+ 321 0008 0446     		mov	r4, r0
+ 114:timingAnalyzer.c ****              DWT->CYCCNT =0; // Reset the counter at start
+ 322              		.loc 1 114 0
+ 323 000a 90F82030 		ldrb	r3, [r0, #32]	@ zero_extendqisi2
+ 324 000e 012B     		cmp	r3, #1
+ 325 0010 05D8     		bhi	.L35
+ 115:timingAnalyzer.c ****              me->startTime = DWT->CYCCNT;
+ 326              		.loc 1 115 0
+ 327 0012 154B     		ldr	r3, .L41
+ 328 0014 0022     		movs	r2, #0
+ 329 0016 5A60     		str	r2, [r3, #4]
+ 116:timingAnalyzer.c ****         }else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 330              		.loc 1 116 0
+ 331 0018 5B68     		ldr	r3, [r3, #4]
+ 332 001a 4362     		str	r3, [r0, #36]
+ 333 001c 0AE0     		b	.L36
+ 334              	.L35:
+ 117:timingAnalyzer.c ****             CySysTickEnable();
+ 335              		.loc 1 117 0
+ 336 001e 023B     		subs	r3, r3, #2
+ 337 0020 DBB2     		uxtb	r3, r3
+ 338 0022 012B     		cmp	r3, #1
+ 339 0024 06D8     		bhi	.L36
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 14
+
+
+ 118:timingAnalyzer.c ****             systickCounter = 0;  // Reset the counter at start
+ 340              		.loc 1 118 0
+ 341 0026 FFF7FEFF 		bl	CySysTickEnable
+ 342              	.LVL24:
+ 119:timingAnalyzer.c ****             me->startTime = systickCounter;
+ 343              		.loc 1 119 0
+ 344 002a 104B     		ldr	r3, .L41+4
+ 345 002c 0022     		movs	r2, #0
+ 346 002e 1A60     		str	r2, [r3]
+ 120:timingAnalyzer.c ****         }
+ 347              		.loc 1 120 0
+ 348 0030 1B68     		ldr	r3, [r3]
+ 349 0032 6362     		str	r3, [r4, #36]
+ 350              	.L36:
+ 122:timingAnalyzer.c ****         // Set pin if applicable
+ 351              		.loc 1 122 0
+ 352 0034 0123     		movs	r3, #1
+ 353 0036 84F82230 		strb	r3, [r4, #34]
+ 124:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 354              		.loc 1 124 0
+ 355 003a E26A     		ldr	r2, [r4, #44]
+ 356 003c 4AB1     		cbz	r2, .L37
+ 124:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 357              		.loc 1 124 0 is_stmt 0 discriminator 1
+ 358 003e 94F82030 		ldrb	r3, [r4, #32]	@ zero_extendqisi2
+ 359 0042 012B     		cmp	r3, #1
+ 360 0044 03D0     		beq	.L38
+ 124:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 361              		.loc 1 124 0 discriminator 2
+ 362 0046 032B     		cmp	r3, #3
+ 363 0048 01D0     		beq	.L38
+ 125:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 364              		.loc 1 125 0 is_stmt 1
+ 365 004a 042B     		cmp	r3, #4
+ 366 004c 01D1     		bne	.L37
+ 367              	.L38:
+ 127:timingAnalyzer.c ****         }
+ 368              		.loc 1 127 0
+ 369 004e 0120     		movs	r0, #1
+ 370 0050 9047     		blx	r2
+ 371              	.LVL25:
+ 372              	.L37:
+ 129:timingAnalyzer.c ****         return RC_SUCCESS;
+ 373              		.loc 1 129 0
+ 374 0052 0123     		movs	r3, #1
+ 375 0054 84F82230 		strb	r3, [r4, #34]
+ 130:timingAnalyzer.c ****     }
+ 376              		.loc 1 130 0
+ 377 0058 0020     		movs	r0, #0
+ 378 005a 10BD     		pop	{r4, pc}
+ 379              	.LVL26:
+ 380              	.L34:
+ 134:timingAnalyzer.c ****         return RC_ERROR;
+ 381              		.loc 1 134 0
+ 382 005c 0448     		ldr	r0, .L41+8
+ 383              	.LVL27:
+ 384 005e FFF7FEFF 		bl	UART_LOG_PutString
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 15
+
+
+ 385              	.LVL28:
+ 135:timingAnalyzer.c ****     }
+ 386              		.loc 1 135 0
+ 387 0062 0120     		movs	r0, #1
+ 138:timingAnalyzer.c **** 
+ 388              		.loc 1 138 0
+ 389 0064 10BD     		pop	{r4, pc}
+ 390              	.L42:
+ 391 0066 00BF     		.align	2
+ 392              	.L41:
+ 393 0068 001000E0 		.word	-536866816
+ 394 006c 00000000 		.word	.LANCHOR0
+ 395 0070 00000000 		.word	.LC0
+ 396              		.cfi_endproc
+ 397              	.LFE67:
+ 398              		.size	TimingAnalyzer_Start, .-TimingAnalyzer_Start
+ 399              		.global	__aeabi_ui2f
+ 400              		.global	__aeabi_fdiv
+ 401              		.section	.text.TimingAnalyzer_Stop,"ax",%progbits
+ 402              		.align	2
+ 403              		.global	TimingAnalyzer_Stop
+ 404              		.thumb
+ 405              		.thumb_func
+ 406              		.type	TimingAnalyzer_Stop, %function
+ 407              	TimingAnalyzer_Stop:
+ 408              	.LFB68:
+ 153:timingAnalyzer.c ****     if(me->state == 1 || me->state == 3){
+ 409              		.loc 1 153 0
+ 410              		.cfi_startproc
+ 411              		@ args = 0, pretend = 0, frame = 0
+ 412              		@ frame_needed = 0, uses_anonymous_args = 0
+ 413              	.LVL29:
+ 414 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 415              		.cfi_def_cfa_offset 24
+ 416              		.cfi_offset 3, -24
+ 417              		.cfi_offset 4, -20
+ 418              		.cfi_offset 5, -16
+ 419              		.cfi_offset 6, -12
+ 420              		.cfi_offset 7, -8
+ 421              		.cfi_offset 14, -4
+ 422 0002 0446     		mov	r4, r0
+ 154:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 423              		.loc 1 154 0
+ 424 0004 90F82230 		ldrb	r3, [r0, #34]	@ zero_extendqisi2
+ 425 0008 012B     		cmp	r3, #1
+ 426 000a 01D0     		beq	.L44
+ 154:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 427              		.loc 1 154 0 is_stmt 0 discriminator 1
+ 428 000c 032B     		cmp	r3, #3
+ 429 000e 3CD1     		bne	.L45
+ 430              	.L44:
+ 155:timingAnalyzer.c ****              me->cycleCount+=me->startTime+DWT->CYCCNT;
+ 431              		.loc 1 155 0 is_stmt 1
+ 432 0010 94F82050 		ldrb	r5, [r4, #32]	@ zero_extendqisi2
+ 433 0014 012D     		cmp	r5, #1
+ 434 0016 0DD8     		bhi	.L46
+ 435              	.LBB2:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 16
+
+
+ 156:timingAnalyzer.c ****              float ms = me->cycleCount / (float)(BCLK__BUS_CLK__HZ/1000);
+ 436              		.loc 1 156 0
+ 437 0018 606A     		ldr	r0, [r4, #36]
+ 438              	.LVL30:
+ 439 001a 1E4B     		ldr	r3, .L52
+ 440 001c 5B68     		ldr	r3, [r3, #4]
+ 441 001e 1844     		add	r0, r0, r3
+ 442 0020 A36B     		ldr	r3, [r4, #56]
+ 443 0022 1844     		add	r0, r0, r3
+ 444 0024 A063     		str	r0, [r4, #56]
+ 157:timingAnalyzer.c ****              me->totalTimeDWT = ms;
+ 445              		.loc 1 157 0
+ 446 0026 FFF7FEFF 		bl	__aeabi_ui2f
+ 447              	.LVL31:
+ 448 002a 1B49     		ldr	r1, .L52+4
+ 449 002c FFF7FEFF 		bl	__aeabi_fdiv
+ 450              	.LVL32:
+ 158:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 451              		.loc 1 158 0
+ 452 0030 6063     		str	r0, [r4, #52]	@ float
+ 453              	.LBE2:
+ 454 0032 0AE0     		b	.L47
+ 455              	.LVL33:
+ 456              	.L46:
+ 159:timingAnalyzer.c ****             me->totalTime+=me->startTime+systickCounter;
+ 457              		.loc 1 159 0
+ 458 0034 AB1E     		subs	r3, r5, #2
+ 459 0036 DBB2     		uxtb	r3, r3
+ 460 0038 012B     		cmp	r3, #1
+ 461 003a 06D8     		bhi	.L47
+ 160:timingAnalyzer.c ****         }
+ 462              		.loc 1 160 0
+ 463 003c 626A     		ldr	r2, [r4, #36]
+ 464 003e 174B     		ldr	r3, .L52+8
+ 465 0040 1B68     		ldr	r3, [r3]
+ 466 0042 1344     		add	r3, r3, r2
+ 467 0044 226B     		ldr	r2, [r4, #48]
+ 468 0046 1344     		add	r3, r3, r2
+ 469 0048 2363     		str	r3, [r4, #48]
+ 470              	.LVL34:
+ 471              	.L47:
+ 163:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 472              		.loc 1 163 0
+ 473 004a E36A     		ldr	r3, [r4, #44]
+ 474 004c 3BB1     		cbz	r3, .L48
+ 163:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 475              		.loc 1 163 0 is_stmt 0 discriminator 1
+ 476 004e 012D     		cmp	r5, #1
+ 477 0050 03D0     		beq	.L49
+ 163:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 478              		.loc 1 163 0 discriminator 2
+ 479 0052 032D     		cmp	r5, #3
+ 480 0054 01D0     		beq	.L49
+ 164:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) 
+ 481              		.loc 1 164 0 is_stmt 1
+ 482 0056 042D     		cmp	r5, #4
+ 483 0058 01D1     		bne	.L48
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 17
+
+
+ 484              	.L49:
+ 167:timingAnalyzer.c ****         }
+ 485              		.loc 1 167 0
+ 486 005a 0020     		movs	r0, #0
+ 487 005c 9847     		blx	r3
+ 488              	.LVL35:
+ 489              	.L48:
+ 169:timingAnalyzer.c ****         analyzers[analyzerCount] = *me;
+ 490              		.loc 1 169 0
+ 491 005e 0223     		movs	r3, #2
+ 492 0060 84F82230 		strb	r3, [r4, #34]
+ 170:timingAnalyzer.c ****         analyzerCount ++;
+ 493              		.loc 1 170 0
+ 494 0064 0D4F     		ldr	r7, .L52+8
+ 495 0066 7E68     		ldr	r6, [r7, #4]
+ 496 0068 07EB8615 		add	r5, r7, r6, lsl #6
+ 497 006c 0835     		adds	r5, r5, #8
+ 498 006e 0FCC     		ldmia	r4!, {r0, r1, r2, r3}
+ 499              	.LVL36:
+ 500 0070 0FC5     		stmia	r5!, {r0, r1, r2, r3}
+ 501 0072 0FCC     		ldmia	r4!, {r0, r1, r2, r3}
+ 502              	.LVL37:
+ 503 0074 0FC5     		stmia	r5!, {r0, r1, r2, r3}
+ 504 0076 0FCC     		ldmia	r4!, {r0, r1, r2, r3}
+ 505              	.LVL38:
+ 506 0078 0FC5     		stmia	r5!, {r0, r1, r2, r3}
+ 507 007a 94E80F00 		ldmia	r4, {r0, r1, r2, r3}
+ 508 007e 85E80F00 		stmia	r5, {r0, r1, r2, r3}
+ 171:timingAnalyzer.c ****         return RC_SUCCESS;
+ 509              		.loc 1 171 0
+ 510 0082 0136     		adds	r6, r6, #1
+ 511 0084 7E60     		str	r6, [r7, #4]
+ 172:timingAnalyzer.c ****     }
+ 512              		.loc 1 172 0
+ 513 0086 0020     		movs	r0, #0
+ 514 0088 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 515              	.LVL39:
+ 516              	.L45:
+ 176:timingAnalyzer.c ****         return RC_ERROR;
+ 517              		.loc 1 176 0
+ 518 008a 0548     		ldr	r0, .L52+12
+ 519              	.LVL40:
+ 520 008c FFF7FEFF 		bl	UART_LOG_PutString
+ 521              	.LVL41:
+ 177:timingAnalyzer.c ****     }
+ 522              		.loc 1 177 0
+ 523 0090 0120     		movs	r0, #1
+ 179:timingAnalyzer.c **** 
+ 524              		.loc 1 179 0
+ 525 0092 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 526              	.LVL42:
+ 527              	.L53:
+ 528              		.align	2
+ 529              	.L52:
+ 530 0094 001000E0 		.word	-536866816
+ 531 0098 0080BB46 		.word	1186693120
+ 532 009c 00000000 		.word	.LANCHOR0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 18
+
+
+ 533 00a0 00000000 		.word	.LC0
+ 534              		.cfi_endproc
+ 535              	.LFE68:
+ 536              		.size	TimingAnalyzer_Stop, .-TimingAnalyzer_Stop
+ 537              		.section	.text.TimingAnalyzer_Pause,"ax",%progbits
+ 538              		.align	2
+ 539              		.global	TimingAnalyzer_Pause
+ 540              		.thumb
+ 541              		.thumb_func
+ 542              		.type	TimingAnalyzer_Pause, %function
+ 543              	TimingAnalyzer_Pause:
+ 544              	.LFB69:
+ 194:timingAnalyzer.c ****     if(me->state == 1){
+ 545              		.loc 1 194 0
+ 546              		.cfi_startproc
+ 547              		@ args = 0, pretend = 0, frame = 0
+ 548              		@ frame_needed = 0, uses_anonymous_args = 0
+ 549              	.LVL43:
+ 550 0000 10B5     		push	{r4, lr}
+ 551              		.cfi_def_cfa_offset 8
+ 552              		.cfi_offset 4, -8
+ 553              		.cfi_offset 14, -4
+ 195:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 554              		.loc 1 195 0
+ 555 0002 90F82230 		ldrb	r3, [r0, #34]	@ zero_extendqisi2
+ 556 0006 012B     		cmp	r3, #1
+ 557 0008 2ED1     		bne	.L55
+ 558 000a 0446     		mov	r4, r0
+ 196:timingAnalyzer.c ****             DWT->CTRL &= ~DWT_CTRL_CYCCNTENA_Msk; //Negating the mask and doing an AND operation wi
+ 559              		.loc 1 196 0
+ 560 000c 90F82030 		ldrb	r3, [r0, #32]	@ zero_extendqisi2
+ 561 0010 012B     		cmp	r3, #1
+ 562 0012 0BD8     		bhi	.L56
+ 197:timingAnalyzer.c ****             me->startTime += DWT->CYCCNT;
+ 563              		.loc 1 197 0
+ 564 0014 174B     		ldr	r3, .L62
+ 565 0016 1A68     		ldr	r2, [r3]
+ 566 0018 22F00102 		bic	r2, r2, #1
+ 567 001c 1A60     		str	r2, [r3]
+ 198:timingAnalyzer.c ****             DWT->CYCCNT = 0;
+ 568              		.loc 1 198 0
+ 569 001e 5A68     		ldr	r2, [r3, #4]
+ 570 0020 416A     		ldr	r1, [r0, #36]
+ 571 0022 0A44     		add	r2, r2, r1
+ 572 0024 4262     		str	r2, [r0, #36]
+ 199:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 573              		.loc 1 199 0
+ 574 0026 0022     		movs	r2, #0
+ 575 0028 5A60     		str	r2, [r3, #4]
+ 576 002a 0CE0     		b	.L57
+ 577              	.L56:
+ 200:timingAnalyzer.c ****             CySysTickStop();
+ 578              		.loc 1 200 0
+ 579 002c 023B     		subs	r3, r3, #2
+ 580 002e DBB2     		uxtb	r3, r3
+ 581 0030 012B     		cmp	r3, #1
+ 582 0032 08D8     		bhi	.L57
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 19
+
+
+ 201:timingAnalyzer.c ****             me->startTime += systickCounter;
+ 583              		.loc 1 201 0
+ 584 0034 FFF7FEFF 		bl	CySysTickStop
+ 585              	.LVL44:
+ 202:timingAnalyzer.c ****             systickCounter = 0;
+ 586              		.loc 1 202 0
+ 587 0038 0F4A     		ldr	r2, .L62+4
+ 588 003a 1368     		ldr	r3, [r2]
+ 589 003c 616A     		ldr	r1, [r4, #36]
+ 590 003e 0B44     		add	r3, r3, r1
+ 591 0040 6362     		str	r3, [r4, #36]
+ 203:timingAnalyzer.c ****         }
+ 592              		.loc 1 203 0
+ 593 0042 0023     		movs	r3, #0
+ 594 0044 1360     		str	r3, [r2]
+ 595              	.L57:
+ 206:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 596              		.loc 1 206 0
+ 597 0046 E26A     		ldr	r2, [r4, #44]
+ 598 0048 4AB1     		cbz	r2, .L58
+ 206:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 599              		.loc 1 206 0 is_stmt 0 discriminator 1
+ 600 004a 94F82030 		ldrb	r3, [r4, #32]	@ zero_extendqisi2
+ 601 004e 012B     		cmp	r3, #1
+ 602 0050 03D0     		beq	.L59
+ 206:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 603              		.loc 1 206 0 discriminator 2
+ 604 0052 032B     		cmp	r3, #3
+ 605 0054 01D0     		beq	.L59
+ 207:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 606              		.loc 1 207 0 is_stmt 1
+ 607 0056 042B     		cmp	r3, #4
+ 608 0058 01D1     		bne	.L58
+ 609              	.L59:
+ 209:timingAnalyzer.c ****         }
+ 610              		.loc 1 209 0
+ 611 005a 0020     		movs	r0, #0
+ 612 005c 9047     		blx	r2
+ 613              	.LVL45:
+ 614              	.L58:
+ 211:timingAnalyzer.c ****         return RC_SUCCESS;
+ 615              		.loc 1 211 0
+ 616 005e 0323     		movs	r3, #3
+ 617 0060 84F82230 		strb	r3, [r4, #34]
+ 212:timingAnalyzer.c ****     }
+ 618              		.loc 1 212 0
+ 619 0064 0020     		movs	r0, #0
+ 620 0066 10BD     		pop	{r4, pc}
+ 621              	.LVL46:
+ 622              	.L55:
+ 216:timingAnalyzer.c ****         return RC_ERROR;
+ 623              		.loc 1 216 0
+ 624 0068 0448     		ldr	r0, .L62+8
+ 625              	.LVL47:
+ 626 006a FFF7FEFF 		bl	UART_LOG_PutString
+ 627              	.LVL48:
+ 217:timingAnalyzer.c ****     }
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 20
+
+
+ 628              		.loc 1 217 0
+ 629 006e 0120     		movs	r0, #1
+ 219:timingAnalyzer.c **** 
+ 630              		.loc 1 219 0
+ 631 0070 10BD     		pop	{r4, pc}
+ 632              	.L63:
+ 633 0072 00BF     		.align	2
+ 634              	.L62:
+ 635 0074 001000E0 		.word	-536866816
+ 636 0078 00000000 		.word	.LANCHOR0
+ 637 007c 00000000 		.word	.LC0
+ 638              		.cfi_endproc
+ 639              	.LFE69:
+ 640              		.size	TimingAnalyzer_Pause, .-TimingAnalyzer_Pause
+ 641              		.section	.text.TimingAnalyzer_Resume,"ax",%progbits
+ 642              		.align	2
+ 643              		.global	TimingAnalyzer_Resume
+ 644              		.thumb
+ 645              		.thumb_func
+ 646              		.type	TimingAnalyzer_Resume, %function
+ 647              	TimingAnalyzer_Resume:
+ 648              	.LFB70:
+ 234:timingAnalyzer.c ****     if(me->state == 3){
+ 649              		.loc 1 234 0
+ 650              		.cfi_startproc
+ 651              		@ args = 0, pretend = 0, frame = 0
+ 652              		@ frame_needed = 0, uses_anonymous_args = 0
+ 653              	.LVL49:
+ 654 0000 10B5     		push	{r4, lr}
+ 655              		.cfi_def_cfa_offset 8
+ 656              		.cfi_offset 4, -8
+ 657              		.cfi_offset 14, -4
+ 235:timingAnalyzer.c ****         if (me->mode == MODE_DWT_COUNTER || me->mode == MODE_DWT_COUNTER_PIN) {
+ 658              		.loc 1 235 0
+ 659 0002 90F82230 		ldrb	r3, [r0, #34]	@ zero_extendqisi2
+ 660 0006 032B     		cmp	r3, #3
+ 661 0008 21D1     		bne	.L65
+ 662 000a 0446     		mov	r4, r0
+ 236:timingAnalyzer.c ****             DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;  //Enabling the clock by an OR operation with the 
+ 663              		.loc 1 236 0
+ 664 000c 90F82030 		ldrb	r3, [r0, #32]	@ zero_extendqisi2
+ 665 0010 012B     		cmp	r3, #1
+ 666 0012 05D8     		bhi	.L66
+ 237:timingAnalyzer.c ****         } else if (me->mode == MODE_SYSTICK || me->mode == MODE_SYSTICK_PIN) {
+ 667              		.loc 1 237 0
+ 668 0014 104A     		ldr	r2, .L72
+ 669 0016 1368     		ldr	r3, [r2]
+ 670 0018 43F00103 		orr	r3, r3, #1
+ 671 001c 1360     		str	r3, [r2]
+ 672 001e 05E0     		b	.L67
+ 673              	.L66:
+ 238:timingAnalyzer.c ****             CySysTickEnable();
+ 674              		.loc 1 238 0
+ 675 0020 023B     		subs	r3, r3, #2
+ 676 0022 DBB2     		uxtb	r3, r3
+ 677 0024 012B     		cmp	r3, #1
+ 678 0026 01D8     		bhi	.L67
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 21
+
+
+ 239:timingAnalyzer.c ****         }
+ 679              		.loc 1 239 0
+ 680 0028 FFF7FEFF 		bl	CySysTickEnable
+ 681              	.LVL50:
+ 682              	.L67:
+ 242:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 683              		.loc 1 242 0
+ 684 002c E26A     		ldr	r2, [r4, #44]
+ 685 002e 4AB1     		cbz	r2, .L68
+ 242:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 686              		.loc 1 242 0 is_stmt 0 discriminator 1
+ 687 0030 94F82030 		ldrb	r3, [r4, #32]	@ zero_extendqisi2
+ 688 0034 012B     		cmp	r3, #1
+ 689 0036 03D0     		beq	.L69
+ 242:timingAnalyzer.c ****                               me->mode == MODE_SYSTICK_PIN || 
+ 690              		.loc 1 242 0 discriminator 2
+ 691 0038 032B     		cmp	r3, #3
+ 692 003a 01D0     		beq	.L69
+ 243:timingAnalyzer.c ****                               me->mode == MODE_PIN_ONLY)) {
+ 693              		.loc 1 243 0 is_stmt 1
+ 694 003c 042B     		cmp	r3, #4
+ 695 003e 01D1     		bne	.L68
+ 696              	.L69:
+ 245:timingAnalyzer.c ****         }
+ 697              		.loc 1 245 0
+ 698 0040 0120     		movs	r0, #1
+ 699 0042 9047     		blx	r2
+ 700              	.LVL51:
+ 701              	.L68:
+ 247:timingAnalyzer.c ****         return RC_SUCCESS;
+ 702              		.loc 1 247 0
+ 703 0044 0123     		movs	r3, #1
+ 704 0046 84F82230 		strb	r3, [r4, #34]
+ 248:timingAnalyzer.c ****     }
+ 705              		.loc 1 248 0
+ 706 004a 0020     		movs	r0, #0
+ 707 004c 10BD     		pop	{r4, pc}
+ 708              	.LVL52:
+ 709              	.L65:
+ 252:timingAnalyzer.c ****         return RC_ERROR;
+ 710              		.loc 1 252 0
+ 711 004e 0348     		ldr	r0, .L72+4
+ 712              	.LVL53:
+ 713 0050 FFF7FEFF 		bl	UART_LOG_PutString
+ 714              	.LVL54:
+ 253:timingAnalyzer.c ****     }
+ 715              		.loc 1 253 0
+ 716 0054 0120     		movs	r0, #1
+ 255:timingAnalyzer.c **** 
+ 717              		.loc 1 255 0
+ 718 0056 10BD     		pop	{r4, pc}
+ 719              	.L73:
+ 720              		.align	2
+ 721              	.L72:
+ 722 0058 001000E0 		.word	-536866816
+ 723 005c 00000000 		.word	.LC0
+ 724              		.cfi_endproc
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 22
+
+
+ 725              	.LFE70:
+ 726              		.size	TimingAnalyzer_Resume, .-TimingAnalyzer_Resume
+ 727              		.global	__aeabi_f2iz
+ 728              		.global	__aeabi_i2f
+ 729              		.global	__aeabi_fsub
+ 730              		.global	__aeabi_fmul
+ 731              		.section	.text.TimingAnalyzer_PrintSingle,"ax",%progbits
+ 732              		.align	2
+ 733              		.global	TimingAnalyzer_PrintSingle
+ 734              		.thumb
+ 735              		.thumb_func
+ 736              		.type	TimingAnalyzer_PrintSingle, %function
+ 737              	TimingAnalyzer_PrintSingle:
+ 738              	.LFB71:
+ 269:timingAnalyzer.c ****     char buffer[128] = {0};
+ 739              		.loc 1 269 0
+ 740              		.cfi_startproc
+ 741              		@ args = 0, pretend = 0, frame = 128
+ 742              		@ frame_needed = 0, uses_anonymous_args = 0
+ 743              	.LVL55:
+ 744 0000 70B5     		push	{r4, r5, r6, lr}
+ 745              		.cfi_def_cfa_offset 16
+ 746              		.cfi_offset 4, -16
+ 747              		.cfi_offset 5, -12
+ 748              		.cfi_offset 6, -8
+ 749              		.cfi_offset 14, -4
+ 750 0002 A0B0     		sub	sp, sp, #128
+ 751              		.cfi_def_cfa_offset 144
+ 752 0004 0446     		mov	r4, r0
+ 270:timingAnalyzer.c ****     UART_LOG_PutString("\r\n");
+ 753              		.loc 1 270 0
+ 754 0006 8022     		movs	r2, #128
+ 755 0008 0021     		movs	r1, #0
+ 756 000a 6846     		mov	r0, sp
+ 757              	.LVL56:
+ 758 000c FFF7FEFF 		bl	memset
+ 759              	.LVL57:
+ 271:timingAnalyzer.c ****     UART_LOG_PutString(me->name);     //Prints the name of the timing analyzer.
+ 760              		.loc 1 271 0
+ 761 0010 2C48     		ldr	r0, .L78
+ 762 0012 FFF7FEFF 		bl	UART_LOG_PutString
+ 763              	.LVL58:
+ 272:timingAnalyzer.c ****     
+ 764              		.loc 1 272 0
+ 765 0016 2046     		mov	r0, r4
+ 766 0018 FFF7FEFF 		bl	UART_LOG_PutString
+ 767              	.LVL59:
+ 275:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer),"\r\n%s :","Elapsed CPU Cycles"); 
+ 768              		.loc 1 275 0
+ 769 001c 94F82030 		ldrb	r3, [r4, #32]	@ zero_extendqisi2
+ 770 0020 012B     		cmp	r3, #1
+ 771 0022 34D8     		bhi	.L75
+ 276:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer), "%u", me->cycleCount);
+ 772              		.loc 1 276 0
+ 773 0024 6846     		mov	r0, sp
+ 774 0026 FFF7FEFF 		bl	strlen
+ 775              	.LVL60:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 23
+
+
+ 776 002a 274D     		ldr	r5, .L78+4
+ 777 002c 274A     		ldr	r2, .L78+8
+ 778 002e 2946     		mov	r1, r5
+ 779 0030 6844     		add	r0, r0, sp
+ 780 0032 FFF7FEFF 		bl	sprintf
+ 781              	.LVL61:
+ 277:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer),"\r\n%s :","Elapsed time");
+ 782              		.loc 1 277 0
+ 783 0036 6846     		mov	r0, sp
+ 784 0038 FFF7FEFF 		bl	strlen
+ 785              	.LVL62:
+ 786 003c A26B     		ldr	r2, [r4, #56]
+ 787 003e 2449     		ldr	r1, .L78+12
+ 788 0040 6844     		add	r0, r0, sp
+ 789 0042 FFF7FEFF 		bl	sprintf
+ 790              	.LVL63:
+ 278:timingAnalyzer.c ****      sprintf(buffer + strlen(buffer), "%d.%06d ms \r\n",(int)me->totalTimeDWT, (int)((me->totalTime
+ 791              		.loc 1 278 0
+ 792 0046 6846     		mov	r0, sp
+ 793 0048 FFF7FEFF 		bl	strlen
+ 794              	.LVL64:
+ 795 004c 214A     		ldr	r2, .L78+16
+ 796 004e 2946     		mov	r1, r5
+ 797 0050 6844     		add	r0, r0, sp
+ 798 0052 FFF7FEFF 		bl	sprintf
+ 799              	.LVL65:
+ 279:timingAnalyzer.c ****     } 
+ 800              		.loc 1 279 0
+ 801 0056 6846     		mov	r0, sp
+ 802 0058 FFF7FEFF 		bl	strlen
+ 803              	.LVL66:
+ 804 005c 0546     		mov	r5, r0
+ 805 005e 646B     		ldr	r4, [r4, #52]	@ float
+ 806              	.LVL67:
+ 807 0060 2046     		mov	r0, r4
+ 808 0062 FFF7FEFF 		bl	__aeabi_f2iz
+ 809              	.LVL68:
+ 810 0066 0646     		mov	r6, r0
+ 811 0068 FFF7FEFF 		bl	__aeabi_i2f
+ 812              	.LVL69:
+ 813 006c 0146     		mov	r1, r0
+ 814 006e 2046     		mov	r0, r4
+ 815 0070 FFF7FEFF 		bl	__aeabi_fsub
+ 816              	.LVL70:
+ 817 0074 1849     		ldr	r1, .L78+20
+ 818 0076 FFF7FEFF 		bl	__aeabi_fmul
+ 819              	.LVL71:
+ 820 007a FFF7FEFF 		bl	__aeabi_f2iz
+ 821              	.LVL72:
+ 822 007e 0346     		mov	r3, r0
+ 823 0080 3246     		mov	r2, r6
+ 824 0082 1649     		ldr	r1, .L78+24
+ 825 0084 0DEB0500 		add	r0, sp, r5
+ 826 0088 FFF7FEFF 		bl	sprintf
+ 827              	.LVL73:
+ 828 008c 13E0     		b	.L76
+ 829              	.LVL74:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 24
+
+
+ 830              	.L75:
+ 281:timingAnalyzer.c ****     {
+ 831              		.loc 1 281 0
+ 832 008e 023B     		subs	r3, r3, #2
+ 833 0090 DBB2     		uxtb	r3, r3
+ 834 0092 012B     		cmp	r3, #1
+ 835 0094 0FD8     		bhi	.L76
+ 283:timingAnalyzer.c ****         sprintf(buffer + strlen(buffer), "%d ms\r\n", me->totalTime);
+ 836              		.loc 1 283 0
+ 837 0096 6846     		mov	r0, sp
+ 838 0098 FFF7FEFF 		bl	strlen
+ 839              	.LVL75:
+ 840 009c 0D4A     		ldr	r2, .L78+16
+ 841 009e 0A49     		ldr	r1, .L78+4
+ 842 00a0 6844     		add	r0, r0, sp
+ 843 00a2 FFF7FEFF 		bl	sprintf
+ 844              	.LVL76:
+ 284:timingAnalyzer.c ****     }
+ 845              		.loc 1 284 0
+ 846 00a6 6846     		mov	r0, sp
+ 847 00a8 FFF7FEFF 		bl	strlen
+ 848              	.LVL77:
+ 849 00ac 226B     		ldr	r2, [r4, #48]
+ 850 00ae 0C49     		ldr	r1, .L78+28
+ 851 00b0 6844     		add	r0, r0, sp
+ 852 00b2 FFF7FEFF 		bl	sprintf
+ 853              	.LVL78:
+ 854              	.L76:
+ 286:timingAnalyzer.c ****     return RC_SUCCESS;
+ 855              		.loc 1 286 0
+ 856 00b6 6846     		mov	r0, sp
+ 857 00b8 FFF7FEFF 		bl	UART_LOG_PutString
+ 858              	.LVL79:
+ 288:timingAnalyzer.c **** 
+ 859              		.loc 1 288 0
+ 860 00bc 0020     		movs	r0, #0
+ 861 00be 20B0     		add	sp, sp, #128
+ 862              		.cfi_def_cfa_offset 16
+ 863              		@ sp needed
+ 864 00c0 70BD     		pop	{r4, r5, r6, pc}
+ 865              	.L79:
+ 866 00c2 00BF     		.align	2
+ 867              	.L78:
+ 868 00c4 10000000 		.word	.LC1
+ 869 00c8 28000000 		.word	.LC3
+ 870 00cc 14000000 		.word	.LC2
+ 871 00d0 30000000 		.word	.LC4
+ 872 00d4 34000000 		.word	.LC5
+ 873 00d8 00247449 		.word	1232348160
+ 874 00dc 44000000 		.word	.LC6
+ 875 00e0 54000000 		.word	.LC7
+ 876              		.cfi_endproc
+ 877              	.LFE71:
+ 878              		.size	TimingAnalyzer_PrintSingle, .-TimingAnalyzer_PrintSingle
+ 879              		.section	.text.TimingAnalyzer_PrintAll,"ax",%progbits
+ 880              		.align	2
+ 881              		.global	TimingAnalyzer_PrintAll
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 25
+
+
+ 882              		.thumb
+ 883              		.thumb_func
+ 884              		.type	TimingAnalyzer_PrintAll, %function
+ 885              	TimingAnalyzer_PrintAll:
+ 886              	.LFB72:
+ 301:timingAnalyzer.c ****     
+ 887              		.loc 1 301 0
+ 888              		.cfi_startproc
+ 889              		@ args = 0, pretend = 0, frame = 0
+ 890              		@ frame_needed = 0, uses_anonymous_args = 0
+ 891 0000 10B5     		push	{r4, lr}
+ 892              		.cfi_def_cfa_offset 8
+ 893              		.cfi_offset 4, -8
+ 894              		.cfi_offset 14, -4
+ 303:timingAnalyzer.c ****     for (uint32_t i = 0; i < MAX_ANALYZERS; i++) {
+ 895              		.loc 1 303 0
+ 896 0002 0A48     		ldr	r0, .L85
+ 897 0004 FFF7FEFF 		bl	UART_LOG_PutString
+ 898              	.LVL80:
+ 899              	.LBB3:
+ 304:timingAnalyzer.c ****         if (analyzers[i].isValid) {
+ 900              		.loc 1 304 0
+ 901 0008 0024     		movs	r4, #0
+ 902 000a 0BE0     		b	.L81
+ 903              	.LVL81:
+ 904              	.L83:
+ 305:timingAnalyzer.c ****             TimingAnalyzer_PrintSingle(&analyzers[i]);
+ 905              		.loc 1 305 0
+ 906 000c 084B     		ldr	r3, .L85+4
+ 907 000e 03EB8413 		add	r3, r3, r4, lsl #6
+ 908 0012 93F84430 		ldrb	r3, [r3, #68]	@ zero_extendqisi2
+ 909 0016 23B1     		cbz	r3, .L82
+ 306:timingAnalyzer.c ****         }
+ 910              		.loc 1 306 0
+ 911 0018 0648     		ldr	r0, .L85+8
+ 912 001a 00EB8410 		add	r0, r0, r4, lsl #6
+ 913 001e FFF7FEFF 		bl	TimingAnalyzer_PrintSingle
+ 914              	.LVL82:
+ 915              	.L82:
+ 304:timingAnalyzer.c ****         if (analyzers[i].isValid) {
+ 916              		.loc 1 304 0 discriminator 2
+ 917 0022 0134     		adds	r4, r4, #1
+ 918              	.LVL83:
+ 919              	.L81:
+ 304:timingAnalyzer.c ****         if (analyzers[i].isValid) {
+ 920              		.loc 1 304 0 is_stmt 0 discriminator 1
+ 921 0024 072C     		cmp	r4, #7
+ 922 0026 F1D9     		bls	.L83
+ 923              	.LBE3:
+ 310:timingAnalyzer.c **** 
+ 924              		.loc 1 310 0 is_stmt 1
+ 925 0028 0020     		movs	r0, #0
+ 926 002a 10BD     		pop	{r4, pc}
+ 927              	.LVL84:
+ 928              	.L86:
+ 929              		.align	2
+ 930              	.L85:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 26
+
+
+ 931 002c 5C000000 		.word	.LC8
+ 932 0030 00000000 		.word	.LANCHOR0
+ 933 0034 08000000 		.word	.LANCHOR0+8
+ 934              		.cfi_endproc
+ 935              	.LFE72:
+ 936              		.size	TimingAnalyzer_PrintAll, .-TimingAnalyzer_PrintAll
+ 937              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 938              		.align	2
+ 939              	.LC0:
+ 940 0000 496E7661 		.ascii	"Invalid State\015\012\000"
+ 940      6C696420 
+ 940      53746174 
+ 940      650D0A00 
+ 941              	.LC1:
+ 942 0010 0D0A00   		.ascii	"\015\012\000"
+ 943 0013 00       		.space	1
+ 944              	.LC2:
+ 945 0014 456C6170 		.ascii	"Elapsed CPU Cycles\000"
+ 945      73656420 
+ 945      43505520 
+ 945      4379636C 
+ 945      657300
+ 946 0027 00       		.space	1
+ 947              	.LC3:
+ 948 0028 0D0A2573 		.ascii	"\015\012%s :\000"
+ 948      203A00
+ 949 002f 00       		.space	1
+ 950              	.LC4:
+ 951 0030 257500   		.ascii	"%u\000"
+ 952 0033 00       		.space	1
+ 953              	.LC5:
+ 954 0034 456C6170 		.ascii	"Elapsed time\000"
+ 954      73656420 
+ 954      74696D65 
+ 954      00
+ 955 0041 000000   		.space	3
+ 956              	.LC6:
+ 957 0044 25642E25 		.ascii	"%d.%06d ms \015\012\000"
+ 957      30366420 
+ 957      6D73200D 
+ 957      0A00
+ 958 0052 0000     		.space	2
+ 959              	.LC7:
+ 960 0054 2564206D 		.ascii	"%d ms\015\012\000"
+ 960      730D0A00 
+ 961              	.LC8:
+ 962 005c 0D0A2050 		.ascii	"\015\012 Printing all analyzer data : \015\012\000"
+ 962      72696E74 
+ 962      696E6720 
+ 962      616C6C20 
+ 962      616E616C 
+ 963              		.bss
+ 964              		.align	2
+ 965              		.set	.LANCHOR0,. + 0
+ 966              		.type	systickCounter, %object
+ 967              		.size	systickCounter, 4
+ 968              	systickCounter:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 27
+
+
+ 969 0000 00000000 		.space	4
+ 970              		.type	analyzerCount, %object
+ 971              		.size	analyzerCount, 4
+ 972              	analyzerCount:
+ 973 0004 00000000 		.space	4
+ 974              		.type	analyzers, %object
+ 975              		.size	analyzers, 512
+ 976              	analyzers:
+ 977 0008 00000000 		.space	512
+ 977      00000000 
+ 977      00000000 
+ 977      00000000 
+ 977      00000000 
+ 978              		.text
+ 979              	.Letext0:
+ 980              		.file 2 "global.h"
+ 981              		.file 3 "c:\\program files (x86)\\cypress\\psoc creator\\4.4\\psoc creator\\import\\gnu\\arm\\5.4.
+ 982              		.file 4 "c:\\program files (x86)\\cypress\\psoc creator\\4.4\\psoc creator\\import\\gnu\\arm\\5.4.
+ 983              		.file 5 "Generated_Source\\PSoC5/core_cm3.h"
+ 984              		.file 6 "timingAnalyzer.h"
+ 985              		.file 7 "Generated_Source\\PSoC5/Red_LED.h"
+ 986              		.file 8 "Generated_Source\\PSoC5/Green_LED.h"
+ 987              		.file 9 "Generated_Source\\PSoC5/Yellow_LED.h"
+ 988              		.file 10 "Generated_Source\\PSoC5/CyLib.h"
+ 989              		.file 11 "c:\\program files (x86)\\cypress\\psoc creator\\4.4\\psoc creator\\import\\gnu\\arm\\5.4
+ 990              		.file 12 "Generated_Source\\PSoC5/UART_LOG.h"
+ 991              		.file 13 "c:\\program files (x86)\\cypress\\psoc creator\\4.4\\psoc creator\\import\\gnu\\arm\\5.4
+ 992              		.section	.debug_info,"",%progbits
+ 993              	.Ldebug_info0:
+ 994 0000 090A0000 		.4byte	0xa09
+ 995 0004 0400     		.2byte	0x4
+ 996 0006 00000000 		.4byte	.Ldebug_abbrev0
+ 997 000a 04       		.byte	0x4
+ 998 000b 01       		.uleb128 0x1
+ 999 000c D1030000 		.4byte	.LASF110
+ 1000 0010 0C       		.byte	0xc
+ 1001 0011 BA050000 		.4byte	.LASF111
+ 1002 0015 4C020000 		.4byte	.LASF112
+ 1003 0019 00000000 		.4byte	.Ldebug_ranges0+0
+ 1004 001d 00000000 		.4byte	0
+ 1005 0021 00000000 		.4byte	.Ldebug_line0
+ 1006 0025 02       		.uleb128 0x2
+ 1007 0026 01       		.byte	0x1
+ 1008 0027 4A000000 		.4byte	0x4a
+ 1009 002b 02       		.byte	0x2
+ 1010 002c 0D       		.byte	0xd
+ 1011 002d 4A000000 		.4byte	0x4a
+ 1012 0031 03       		.uleb128 0x3
+ 1013 0032 2A000000 		.4byte	.LASF0
+ 1014 0036 00       		.byte	0
+ 1015 0037 03       		.uleb128 0x3
+ 1016 0038 ED050000 		.4byte	.LASF1
+ 1017 003c 01       		.byte	0x1
+ 1018 003d 03       		.uleb128 0x3
+ 1019 003e 8E010000 		.4byte	.LASF2
+ 1020 0042 02       		.byte	0x2
+ 1021 0043 03       		.uleb128 0x3
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 28
+
+
+ 1022 0044 0A030000 		.4byte	.LASF3
+ 1023 0048 03       		.byte	0x3
+ 1024 0049 00       		.byte	0
+ 1025 004a 04       		.uleb128 0x4
+ 1026 004b 01       		.byte	0x1
+ 1027 004c 08       		.byte	0x8
+ 1028 004d E5020000 		.4byte	.LASF4
+ 1029 0051 05       		.uleb128 0x5
+ 1030 0052 76010000 		.4byte	.LASF6
+ 1031 0056 02       		.byte	0x2
+ 1032 0057 13       		.byte	0x13
+ 1033 0058 25000000 		.4byte	0x25
+ 1034 005c 04       		.uleb128 0x4
+ 1035 005d 01       		.byte	0x1
+ 1036 005e 06       		.byte	0x6
+ 1037 005f 31030000 		.4byte	.LASF5
+ 1038 0063 05       		.uleb128 0x5
+ 1039 0064 A6030000 		.4byte	.LASF7
+ 1040 0068 03       		.byte	0x3
+ 1041 0069 1D       		.byte	0x1d
+ 1042 006a 4A000000 		.4byte	0x4a
+ 1043 006e 04       		.uleb128 0x4
+ 1044 006f 02       		.byte	0x2
+ 1045 0070 05       		.byte	0x5
+ 1046 0071 7F000000 		.4byte	.LASF8
+ 1047 0075 04       		.uleb128 0x4
+ 1048 0076 02       		.byte	0x2
+ 1049 0077 07       		.byte	0x7
+ 1050 0078 BE030000 		.4byte	.LASF9
+ 1051 007c 05       		.uleb128 0x5
+ 1052 007d 65050000 		.4byte	.LASF10
+ 1053 0081 03       		.byte	0x3
+ 1054 0082 3F       		.byte	0x3f
+ 1055 0083 87000000 		.4byte	0x87
+ 1056 0087 04       		.uleb128 0x4
+ 1057 0088 04       		.byte	0x4
+ 1058 0089 05       		.byte	0x5
+ 1059 008a 04020000 		.4byte	.LASF11
+ 1060 008e 05       		.uleb128 0x5
+ 1061 008f EE000000 		.4byte	.LASF12
+ 1062 0093 03       		.byte	0x3
+ 1063 0094 41       		.byte	0x41
+ 1064 0095 99000000 		.4byte	0x99
+ 1065 0099 04       		.uleb128 0x4
+ 1066 009a 04       		.byte	0x4
+ 1067 009b 07       		.byte	0x7
+ 1068 009c F1040000 		.4byte	.LASF13
+ 1069 00a0 04       		.uleb128 0x4
+ 1070 00a1 08       		.byte	0x8
+ 1071 00a2 05       		.byte	0x5
+ 1072 00a3 C5010000 		.4byte	.LASF14
+ 1073 00a7 04       		.uleb128 0x4
+ 1074 00a8 08       		.byte	0x8
+ 1075 00a9 07       		.byte	0x7
+ 1076 00aa 45030000 		.4byte	.LASF15
+ 1077 00ae 06       		.uleb128 0x6
+ 1078 00af 04       		.byte	0x4
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 29
+
+
+ 1079 00b0 05       		.byte	0x5
+ 1080 00b1 696E7400 		.ascii	"int\000"
+ 1081 00b5 04       		.uleb128 0x4
+ 1082 00b6 04       		.byte	0x4
+ 1083 00b7 07       		.byte	0x7
+ 1084 00b8 90030000 		.4byte	.LASF16
+ 1085 00bc 05       		.uleb128 0x5
+ 1086 00bd 6E010000 		.4byte	.LASF17
+ 1087 00c1 04       		.byte	0x4
+ 1088 00c2 18       		.byte	0x18
+ 1089 00c3 63000000 		.4byte	0x63
+ 1090 00c7 05       		.uleb128 0x5
+ 1091 00c8 3D030000 		.4byte	.LASF18
+ 1092 00cc 04       		.byte	0x4
+ 1093 00cd 2C       		.byte	0x2c
+ 1094 00ce 7C000000 		.4byte	0x7c
+ 1095 00d2 05       		.uleb128 0x5
+ 1096 00d3 69030000 		.4byte	.LASF19
+ 1097 00d7 04       		.byte	0x4
+ 1098 00d8 30       		.byte	0x30
+ 1099 00d9 8E000000 		.4byte	0x8e
+ 1100 00dd 04       		.uleb128 0x4
+ 1101 00de 04       		.byte	0x4
+ 1102 00df 04       		.byte	0x4
+ 1103 00e0 A6010000 		.4byte	.LASF20
+ 1104 00e4 04       		.uleb128 0x4
+ 1105 00e5 08       		.byte	0x8
+ 1106 00e6 04       		.byte	0x4
+ 1107 00e7 35000000 		.4byte	.LASF21
+ 1108 00eb 04       		.uleb128 0x4
+ 1109 00ec 01       		.byte	0x1
+ 1110 00ed 08       		.byte	0x8
+ 1111 00ee 6D040000 		.4byte	.LASF22
+ 1112 00f2 04       		.uleb128 0x4
+ 1113 00f3 08       		.byte	0x8
+ 1114 00f4 04       		.byte	0x4
+ 1115 00f5 CA020000 		.4byte	.LASF23
+ 1116 00f9 04       		.uleb128 0x4
+ 1117 00fa 04       		.byte	0x4
+ 1118 00fb 07       		.byte	0x7
+ 1119 00fc A1000000 		.4byte	.LASF24
+ 1120 0100 07       		.uleb128 0x7
+ 1121 0101 04       		.byte	0x4
+ 1122 0102 06010000 		.4byte	0x106
+ 1123 0106 08       		.uleb128 0x8
+ 1124 0107 EB000000 		.4byte	0xeb
+ 1125 010b 09       		.uleb128 0x9
+ 1126 010c D2000000 		.4byte	0xd2
+ 1127 0110 08       		.uleb128 0x8
+ 1128 0111 0B010000 		.4byte	0x10b
+ 1129 0115 0A       		.uleb128 0xa
+ 1130 0116 D2000000 		.4byte	0xd2
+ 1131 011a 25010000 		.4byte	0x125
+ 1132 011e 0B       		.uleb128 0xb
+ 1133 011f F9000000 		.4byte	0xf9
+ 1134 0123 00       		.byte	0
+ 1135 0124 00       		.byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 30
+
+
+ 1136 0125 0C       		.uleb128 0xc
+ 1137 0126 5C       		.byte	0x5c
+ 1138 0127 05       		.byte	0x5
+ 1139 0128 4F03     		.2byte	0x34f
+ 1140 012a 5A020000 		.4byte	0x25a
+ 1141 012e 0D       		.uleb128 0xd
+ 1142 012f 37010000 		.4byte	.LASF25
+ 1143 0133 05       		.byte	0x5
+ 1144 0134 5103     		.2byte	0x351
+ 1145 0136 0B010000 		.4byte	0x10b
+ 1146 013a 00       		.byte	0
+ 1147 013b 0D       		.uleb128 0xd
+ 1148 013c D9010000 		.4byte	.LASF26
+ 1149 0140 05       		.byte	0x5
+ 1150 0141 5203     		.2byte	0x352
+ 1151 0143 0B010000 		.4byte	0x10b
+ 1152 0147 04       		.byte	0x4
+ 1153 0148 0D       		.uleb128 0xd
+ 1154 0149 E2040000 		.4byte	.LASF27
+ 1155 014d 05       		.byte	0x5
+ 1156 014e 5303     		.2byte	0x353
+ 1157 0150 0B010000 		.4byte	0x10b
+ 1158 0154 08       		.byte	0x8
+ 1159 0155 0D       		.uleb128 0xd
+ 1160 0156 04060000 		.4byte	.LASF28
+ 1161 015a 05       		.byte	0x5
+ 1162 015b 5403     		.2byte	0x354
+ 1163 015d 0B010000 		.4byte	0x10b
+ 1164 0161 0C       		.byte	0xc
+ 1165 0162 0D       		.uleb128 0xd
+ 1166 0163 2D060000 		.4byte	.LASF29
+ 1167 0167 05       		.byte	0x5
+ 1168 0168 5503     		.2byte	0x355
+ 1169 016a 0B010000 		.4byte	0x10b
+ 1170 016e 10       		.byte	0x10
+ 1171 016f 0D       		.uleb128 0xd
+ 1172 0170 92050000 		.4byte	.LASF30
+ 1173 0174 05       		.byte	0x5
+ 1174 0175 5603     		.2byte	0x356
+ 1175 0177 0B010000 		.4byte	0x10b
+ 1176 017b 14       		.byte	0x14
+ 1177 017c 0D       		.uleb128 0xd
+ 1178 017d D5000000 		.4byte	.LASF31
+ 1179 0181 05       		.byte	0x5
+ 1180 0182 5703     		.2byte	0x357
+ 1181 0184 0B010000 		.4byte	0x10b
+ 1182 0188 18       		.byte	0x18
+ 1183 0189 0D       		.uleb128 0xd
+ 1184 018a D0000000 		.4byte	.LASF32
+ 1185 018e 05       		.byte	0x5
+ 1186 018f 5803     		.2byte	0x358
+ 1187 0191 10010000 		.4byte	0x110
+ 1188 0195 1C       		.byte	0x1c
+ 1189 0196 0D       		.uleb128 0xd
+ 1190 0197 8A040000 		.4byte	.LASF33
+ 1191 019b 05       		.byte	0x5
+ 1192 019c 5903     		.2byte	0x359
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 31
+
+
+ 1193 019e 0B010000 		.4byte	0x10b
+ 1194 01a2 20       		.byte	0x20
+ 1195 01a3 0D       		.uleb128 0xd
+ 1196 01a4 FE020000 		.4byte	.LASF34
+ 1197 01a8 05       		.byte	0x5
+ 1198 01a9 5A03     		.2byte	0x35a
+ 1199 01ab 0B010000 		.4byte	0x10b
+ 1200 01af 24       		.byte	0x24
+ 1201 01b0 0D       		.uleb128 0xd
+ 1202 01b1 AC020000 		.4byte	.LASF35
+ 1203 01b5 05       		.byte	0x5
+ 1204 01b6 5B03     		.2byte	0x35b
+ 1205 01b8 0B010000 		.4byte	0x10b
+ 1206 01bc 28       		.byte	0x28
+ 1207 01bd 0D       		.uleb128 0xd
+ 1208 01be CE040000 		.4byte	.LASF36
+ 1209 01c2 05       		.byte	0x5
+ 1210 01c3 5C03     		.2byte	0x35c
+ 1211 01c5 15010000 		.4byte	0x115
+ 1212 01c9 2C       		.byte	0x2c
+ 1213 01ca 0D       		.uleb128 0xd
+ 1214 01cb 90040000 		.4byte	.LASF37
+ 1215 01cf 05       		.byte	0x5
+ 1216 01d0 5D03     		.2byte	0x35d
+ 1217 01d2 0B010000 		.4byte	0x10b
+ 1218 01d6 30       		.byte	0x30
+ 1219 01d7 0D       		.uleb128 0xd
+ 1220 01d8 04030000 		.4byte	.LASF38
+ 1221 01dc 05       		.byte	0x5
+ 1222 01dd 5E03     		.2byte	0x35e
+ 1223 01df 0B010000 		.4byte	0x10b
+ 1224 01e3 34       		.byte	0x34
+ 1225 01e4 0D       		.uleb128 0xd
+ 1226 01e5 B6020000 		.4byte	.LASF39
+ 1227 01e9 05       		.byte	0x5
+ 1228 01ea 5F03     		.2byte	0x35f
+ 1229 01ec 0B010000 		.4byte	0x10b
+ 1230 01f0 38       		.byte	0x38
+ 1231 01f1 0D       		.uleb128 0xd
+ 1232 01f2 D8040000 		.4byte	.LASF40
+ 1233 01f6 05       		.byte	0x5
+ 1234 01f7 6003     		.2byte	0x360
+ 1235 01f9 15010000 		.4byte	0x115
+ 1236 01fd 3C       		.byte	0x3c
+ 1237 01fe 0D       		.uleb128 0xd
+ 1238 01ff 96040000 		.4byte	.LASF41
+ 1239 0203 05       		.byte	0x5
+ 1240 0204 6103     		.2byte	0x361
+ 1241 0206 0B010000 		.4byte	0x10b
+ 1242 020a 40       		.byte	0x40
+ 1243 020b 0D       		.uleb128 0xd
+ 1244 020c D3010000 		.4byte	.LASF42
+ 1245 0210 05       		.byte	0x5
+ 1246 0211 6203     		.2byte	0x362
+ 1247 0213 0B010000 		.4byte	0x10b
+ 1248 0217 44       		.byte	0x44
+ 1249 0218 0D       		.uleb128 0xd
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 32
+
+
+ 1250 0219 0D020000 		.4byte	.LASF43
+ 1251 021d 05       		.byte	0x5
+ 1252 021e 6303     		.2byte	0x363
+ 1253 0220 0B010000 		.4byte	0x10b
+ 1254 0224 48       		.byte	0x48
+ 1255 0225 0D       		.uleb128 0xd
+ 1256 0226 55010000 		.4byte	.LASF44
+ 1257 022a 05       		.byte	0x5
+ 1258 022b 6403     		.2byte	0x364
+ 1259 022d 15010000 		.4byte	0x115
+ 1260 0231 4C       		.byte	0x4c
+ 1261 0232 0D       		.uleb128 0xd
+ 1262 0233 9C040000 		.4byte	.LASF45
+ 1263 0237 05       		.byte	0x5
+ 1264 0238 6503     		.2byte	0x365
+ 1265 023a 0B010000 		.4byte	0x10b
+ 1266 023e 50       		.byte	0x50
+ 1267 023f 0D       		.uleb128 0xd
+ 1268 0240 1D030000 		.4byte	.LASF46
+ 1269 0244 05       		.byte	0x5
+ 1270 0245 6603     		.2byte	0x366
+ 1271 0247 0B010000 		.4byte	0x10b
+ 1272 024b 54       		.byte	0x54
+ 1273 024c 0D       		.uleb128 0xd
+ 1274 024d C0020000 		.4byte	.LASF47
+ 1275 0251 05       		.byte	0x5
+ 1276 0252 6703     		.2byte	0x367
+ 1277 0254 0B010000 		.4byte	0x10b
+ 1278 0258 58       		.byte	0x58
+ 1279 0259 00       		.byte	0
+ 1280 025a 0E       		.uleb128 0xe
+ 1281 025b 9D030000 		.4byte	.LASF48
+ 1282 025f 05       		.byte	0x5
+ 1283 0260 6803     		.2byte	0x368
+ 1284 0262 25010000 		.4byte	0x125
+ 1285 0266 0C       		.uleb128 0xc
+ 1286 0267 10       		.byte	0x10
+ 1287 0268 05       		.byte	0x5
+ 1288 0269 DC04     		.2byte	0x4dc
+ 1289 026b A4020000 		.4byte	0x2a4
+ 1290 026f 0D       		.uleb128 0xd
+ 1291 0270 B8030000 		.4byte	.LASF49
+ 1292 0274 05       		.byte	0x5
+ 1293 0275 DE04     		.2byte	0x4de
+ 1294 0277 0B010000 		.4byte	0x10b
+ 1295 027b 00       		.byte	0
+ 1296 027c 0D       		.uleb128 0xd
+ 1297 027d 7B010000 		.4byte	.LASF50
+ 1298 0281 05       		.byte	0x5
+ 1299 0282 DF04     		.2byte	0x4df
+ 1300 0284 0B010000 		.4byte	0x10b
+ 1301 0288 04       		.byte	0x4
+ 1302 0289 0D       		.uleb128 0xd
+ 1303 028a A0010000 		.4byte	.LASF51
+ 1304 028e 05       		.byte	0x5
+ 1305 028f E004     		.2byte	0x4e0
+ 1306 0291 0B010000 		.4byte	0x10b
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 33
+
+
+ 1307 0295 08       		.byte	0x8
+ 1308 0296 0D       		.uleb128 0xd
+ 1309 0297 66000000 		.4byte	.LASF52
+ 1310 029b 05       		.byte	0x5
+ 1311 029c E104     		.2byte	0x4e1
+ 1312 029e 0B010000 		.4byte	0x10b
+ 1313 02a2 0C       		.byte	0xc
+ 1314 02a3 00       		.byte	0
+ 1315 02a4 0E       		.uleb128 0xe
+ 1316 02a5 5F010000 		.4byte	.LASF53
+ 1317 02a9 05       		.byte	0x5
+ 1318 02aa E204     		.2byte	0x4e2
+ 1319 02ac 66020000 		.4byte	0x266
+ 1320 02b0 02       		.uleb128 0x2
+ 1321 02b1 01       		.byte	0x1
+ 1322 02b2 4A000000 		.4byte	0x4a
+ 1323 02b6 06       		.byte	0x6
+ 1324 02b7 14       		.byte	0x14
+ 1325 02b8 DB020000 		.4byte	0x2db
+ 1326 02bc 03       		.uleb128 0x3
+ 1327 02bd E0010000 		.4byte	.LASF54
+ 1328 02c1 00       		.byte	0
+ 1329 02c2 03       		.uleb128 0x3
+ 1330 02c3 22020000 		.4byte	.LASF55
+ 1331 02c7 01       		.byte	0x1
+ 1332 02c8 03       		.uleb128 0x3
+ 1333 02c9 81010000 		.4byte	.LASF56
+ 1334 02cd 02       		.byte	0x2
+ 1335 02ce 03       		.uleb128 0x3
+ 1336 02cf B1000000 		.4byte	.LASF57
+ 1337 02d3 03       		.byte	0x3
+ 1338 02d4 03       		.uleb128 0x3
+ 1339 02d5 23030000 		.4byte	.LASF58
+ 1340 02d9 04       		.byte	0x4
+ 1341 02da 00       		.byte	0
+ 1342 02db 05       		.uleb128 0x5
+ 1343 02dc 0B060000 		.4byte	.LASF59
+ 1344 02e0 06       		.byte	0x6
+ 1345 02e1 1A       		.byte	0x1a
+ 1346 02e2 B0020000 		.4byte	0x2b0
+ 1347 02e6 05       		.uleb128 0x5
+ 1348 02e7 72000000 		.4byte	.LASF60
+ 1349 02eb 06       		.byte	0x6
+ 1350 02ec 1D       		.byte	0x1d
+ 1351 02ed F1020000 		.4byte	0x2f1
+ 1352 02f1 07       		.uleb128 0x7
+ 1353 02f2 04       		.byte	0x4
+ 1354 02f3 F7020000 		.4byte	0x2f7
+ 1355 02f7 0F       		.uleb128 0xf
+ 1356 02f8 02030000 		.4byte	0x302
+ 1357 02fc 10       		.uleb128 0x10
+ 1358 02fd BC000000 		.4byte	0xbc
+ 1359 0301 00       		.byte	0
+ 1360 0302 02       		.uleb128 0x2
+ 1361 0303 01       		.byte	0x1
+ 1362 0304 4A000000 		.4byte	0x4a
+ 1363 0308 06       		.byte	0x6
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 34
+
+
+ 1364 0309 1F       		.byte	0x1f
+ 1365 030a 2D030000 		.4byte	0x32d
+ 1366 030e 03       		.uleb128 0x3
+ 1367 030f 39050000 		.4byte	.LASF61
+ 1368 0313 00       		.byte	0
+ 1369 0314 03       		.uleb128 0x3
+ 1370 0315 9B020000 		.4byte	.LASF62
+ 1371 0319 01       		.byte	0x1
+ 1372 031a 03       		.uleb128 0x3
+ 1373 031b F3020000 		.4byte	.LASF63
+ 1374 031f 02       		.byte	0x2
+ 1375 0320 03       		.uleb128 0x3
+ 1376 0321 F8010000 		.4byte	.LASF64
+ 1377 0325 03       		.byte	0x3
+ 1378 0326 03       		.uleb128 0x3
+ 1379 0327 5C030000 		.4byte	.LASF65
+ 1380 032b 04       		.byte	0x4
+ 1381 032c 00       		.byte	0
+ 1382 032d 05       		.uleb128 0x5
+ 1383 032e 3C000000 		.4byte	.LASF66
+ 1384 0332 06       		.byte	0x6
+ 1385 0333 25       		.byte	0x25
+ 1386 0334 02030000 		.4byte	0x302
+ 1387 0338 11       		.uleb128 0x11
+ 1388 0339 40       		.byte	0x40
+ 1389 033a 06       		.byte	0x6
+ 1390 033b 27       		.byte	0x27
+ 1391 033c C5030000 		.4byte	0x3c5
+ 1392 0340 12       		.uleb128 0x12
+ 1393 0341 A7020000 		.4byte	.LASF67
+ 1394 0345 06       		.byte	0x6
+ 1395 0346 28       		.byte	0x28
+ 1396 0347 C5030000 		.4byte	0x3c5
+ 1397 034b 00       		.byte	0
+ 1398 034c 12       		.uleb128 0x12
+ 1399 034d F9000000 		.4byte	.LASF68
+ 1400 0351 06       		.byte	0x6
+ 1401 0352 29       		.byte	0x29
+ 1402 0353 DB020000 		.4byte	0x2db
+ 1403 0357 20       		.byte	0x20
+ 1404 0358 13       		.uleb128 0x13
+ 1405 0359 70696E00 		.ascii	"pin\000"
+ 1406 035d 06       		.byte	0x6
+ 1407 035e 2A       		.byte	0x2a
+ 1408 035f BC000000 		.4byte	0xbc
+ 1409 0363 21       		.byte	0x21
+ 1410 0364 12       		.uleb128 0x12
+ 1411 0365 6C000000 		.4byte	.LASF69
+ 1412 0369 06       		.byte	0x6
+ 1413 036a 2B       		.byte	0x2b
+ 1414 036b 2D030000 		.4byte	0x32d
+ 1415 036f 22       		.byte	0x22
+ 1416 0370 12       		.uleb128 0x12
+ 1417 0371 03050000 		.4byte	.LASF70
+ 1418 0375 06       		.byte	0x6
+ 1419 0376 2C       		.byte	0x2c
+ 1420 0377 D2000000 		.4byte	0xd2
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 35
+
+
+ 1421 037b 24       		.byte	0x24
+ 1422 037c 12       		.uleb128 0x12
+ 1423 037d E9040000 		.4byte	.LASF71
+ 1424 0381 06       		.byte	0x6
+ 1425 0382 2D       		.byte	0x2d
+ 1426 0383 D2000000 		.4byte	0xd2
+ 1427 0387 28       		.byte	0x28
+ 1428 0388 12       		.uleb128 0x12
+ 1429 0389 17020000 		.4byte	.LASF72
+ 1430 038d 06       		.byte	0x6
+ 1431 038e 2E       		.byte	0x2e
+ 1432 038f E6020000 		.4byte	0x2e6
+ 1433 0393 2C       		.byte	0x2c
+ 1434 0394 12       		.uleb128 0x12
+ 1435 0395 AF040000 		.4byte	.LASF73
+ 1436 0399 06       		.byte	0x6
+ 1437 039a 2F       		.byte	0x2f
+ 1438 039b D2000000 		.4byte	0xd2
+ 1439 039f 30       		.byte	0x30
+ 1440 03a0 12       		.uleb128 0x12
+ 1441 03a1 59000000 		.4byte	.LASF74
+ 1442 03a5 06       		.byte	0x6
+ 1443 03a6 30       		.byte	0x30
+ 1444 03a7 DD000000 		.4byte	0xdd
+ 1445 03ab 34       		.byte	0x34
+ 1446 03ac 12       		.uleb128 0x12
+ 1447 03ad 5A050000 		.4byte	.LASF75
+ 1448 03b1 06       		.byte	0x6
+ 1449 03b2 31       		.byte	0x31
+ 1450 03b3 D2000000 		.4byte	0xd2
+ 1451 03b7 38       		.byte	0x38
+ 1452 03b8 12       		.uleb128 0x12
+ 1453 03b9 93020000 		.4byte	.LASF76
+ 1454 03bd 06       		.byte	0x6
+ 1455 03be 32       		.byte	0x32
+ 1456 03bf D5030000 		.4byte	0x3d5
+ 1457 03c3 3C       		.byte	0x3c
+ 1458 03c4 00       		.byte	0
+ 1459 03c5 0A       		.uleb128 0xa
+ 1460 03c6 EB000000 		.4byte	0xeb
+ 1461 03ca D5030000 		.4byte	0x3d5
+ 1462 03ce 0B       		.uleb128 0xb
+ 1463 03cf F9000000 		.4byte	0xf9
+ 1464 03d3 1F       		.byte	0x1f
+ 1465 03d4 00       		.byte	0
+ 1466 03d5 04       		.uleb128 0x4
+ 1467 03d6 01       		.byte	0x1
+ 1468 03d7 02       		.byte	0x2
+ 1469 03d8 A9040000 		.4byte	.LASF77
+ 1470 03dc 05       		.uleb128 0x5
+ 1471 03dd DD000000 		.4byte	.LASF78
+ 1472 03e1 06       		.byte	0x6
+ 1473 03e2 33       		.byte	0x33
+ 1474 03e3 38030000 		.4byte	0x338
+ 1475 03e7 14       		.uleb128 0x14
+ 1476 03e8 4A050000 		.4byte	.LASF113
+ 1477 03ec 01       		.byte	0x1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 36
+
+
+ 1478 03ed 14       		.byte	0x14
+ 1479 03ee 00000000 		.4byte	.LFB64
+ 1480 03f2 10000000 		.4byte	.LFE64-.LFB64
+ 1481 03f6 01       		.uleb128 0x1
+ 1482 03f7 9C       		.byte	0x9c
+ 1483 03f8 15       		.uleb128 0x15
+ 1484 03f9 00000000 		.4byte	.LASF79
+ 1485 03fd 01       		.byte	0x1
+ 1486 03fe 4301     		.2byte	0x143
+ 1487 0400 00000000 		.4byte	.LFB73
+ 1488 0404 12000000 		.4byte	.LFE73-.LFB73
+ 1489 0408 01       		.uleb128 0x1
+ 1490 0409 9C       		.byte	0x9c
+ 1491 040a 37040000 		.4byte	0x437
+ 1492 040e 16       		.uleb128 0x16
+ 1493 040f 4F010000 		.4byte	.LASF81
+ 1494 0413 01       		.byte	0x1
+ 1495 0414 4301     		.2byte	0x143
+ 1496 0416 BC000000 		.4byte	0xbc
+ 1497 041a 00000000 		.4byte	.LLST0
+ 1498 041e 17       		.uleb128 0x17
+ 1499 041f 08000000 		.4byte	.LVL1
+ 1500 0423 7F090000 		.4byte	0x97f
+ 1501 0427 18       		.uleb128 0x18
+ 1502 0428 10000000 		.4byte	.LVL4
+ 1503 042c 7F090000 		.4byte	0x97f
+ 1504 0430 19       		.uleb128 0x19
+ 1505 0431 01       		.uleb128 0x1
+ 1506 0432 50       		.byte	0x50
+ 1507 0433 01       		.uleb128 0x1
+ 1508 0434 30       		.byte	0x30
+ 1509 0435 00       		.byte	0
+ 1510 0436 00       		.byte	0
+ 1511 0437 15       		.uleb128 0x15
+ 1512 0438 72040000 		.4byte	.LASF80
+ 1513 043c 01       		.byte	0x1
+ 1514 043d 5601     		.2byte	0x156
+ 1515 043f 00000000 		.4byte	.LFB74
+ 1516 0443 12000000 		.4byte	.LFE74-.LFB74
+ 1517 0447 01       		.uleb128 0x1
+ 1518 0448 9C       		.byte	0x9c
+ 1519 0449 76040000 		.4byte	0x476
+ 1520 044d 16       		.uleb128 0x16
+ 1521 044e 4F010000 		.4byte	.LASF81
+ 1522 0452 01       		.byte	0x1
+ 1523 0453 5601     		.2byte	0x156
+ 1524 0455 BC000000 		.4byte	0xbc
+ 1525 0459 3A000000 		.4byte	.LLST1
+ 1526 045d 17       		.uleb128 0x17
+ 1527 045e 08000000 		.4byte	.LVL6
+ 1528 0462 8A090000 		.4byte	0x98a
+ 1529 0466 18       		.uleb128 0x18
+ 1530 0467 10000000 		.4byte	.LVL9
+ 1531 046b 8A090000 		.4byte	0x98a
+ 1532 046f 19       		.uleb128 0x19
+ 1533 0470 01       		.uleb128 0x1
+ 1534 0471 50       		.byte	0x50
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 37
+
+
+ 1535 0472 01       		.uleb128 0x1
+ 1536 0473 30       		.byte	0x30
+ 1537 0474 00       		.byte	0
+ 1538 0475 00       		.byte	0
+ 1539 0476 15       		.uleb128 0x15
+ 1540 0477 AC010000 		.4byte	.LASF82
+ 1541 047b 01       		.byte	0x1
+ 1542 047c 6901     		.2byte	0x169
+ 1543 047e 00000000 		.4byte	.LFB75
+ 1544 0482 12000000 		.4byte	.LFE75-.LFB75
+ 1545 0486 01       		.uleb128 0x1
+ 1546 0487 9C       		.byte	0x9c
+ 1547 0488 B5040000 		.4byte	0x4b5
+ 1548 048c 16       		.uleb128 0x16
+ 1549 048d 4F010000 		.4byte	.LASF81
+ 1550 0491 01       		.byte	0x1
+ 1551 0492 6901     		.2byte	0x169
+ 1552 0494 BC000000 		.4byte	0xbc
+ 1553 0498 74000000 		.4byte	.LLST2
+ 1554 049c 17       		.uleb128 0x17
+ 1555 049d 08000000 		.4byte	.LVL11
+ 1556 04a1 95090000 		.4byte	0x995
+ 1557 04a5 18       		.uleb128 0x18
+ 1558 04a6 10000000 		.4byte	.LVL14
+ 1559 04aa 95090000 		.4byte	0x995
+ 1560 04ae 19       		.uleb128 0x19
+ 1561 04af 01       		.uleb128 0x1
+ 1562 04b0 50       		.byte	0x50
+ 1563 04b1 01       		.uleb128 0x1
+ 1564 04b2 30       		.byte	0x30
+ 1565 04b3 00       		.byte	0
+ 1566 04b4 00       		.byte	0
+ 1567 04b5 1A       		.uleb128 0x1a
+ 1568 04b6 72030000 		.4byte	.LASF83
+ 1569 04ba 01       		.byte	0x1
+ 1570 04bb 28       		.byte	0x28
+ 1571 04bc 51000000 		.4byte	0x51
+ 1572 04c0 00000000 		.4byte	.LFB65
+ 1573 04c4 3C000000 		.4byte	.LFE65-.LFB65
+ 1574 04c8 01       		.uleb128 0x1
+ 1575 04c9 9C       		.byte	0x9c
+ 1576 04ca 05050000 		.4byte	0x505
+ 1577 04ce 17       		.uleb128 0x17
+ 1578 04cf 06000000 		.4byte	.LVL15
+ 1579 04d3 A0090000 		.4byte	0x9a0
+ 1580 04d7 1B       		.uleb128 0x1b
+ 1581 04d8 0E000000 		.4byte	.LVL16
+ 1582 04dc AB090000 		.4byte	0x9ab
+ 1583 04e0 F3040000 		.4byte	0x4f3
+ 1584 04e4 19       		.uleb128 0x19
+ 1585 04e5 01       		.uleb128 0x1
+ 1586 04e6 50       		.byte	0x50
+ 1587 04e7 01       		.uleb128 0x1
+ 1588 04e8 30       		.byte	0x30
+ 1589 04e9 19       		.uleb128 0x19
+ 1590 04ea 01       		.uleb128 0x1
+ 1591 04eb 51       		.byte	0x51
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 38
+
+
+ 1592 04ec 05       		.uleb128 0x5
+ 1593 04ed 03       		.byte	0x3
+ 1594 04ee 00000000 		.4byte	SysTick_Handler
+ 1595 04f2 00       		.byte	0
+ 1596 04f3 18       		.uleb128 0x18
+ 1597 04f4 16000000 		.4byte	.LVL17
+ 1598 04f8 B6090000 		.4byte	0x9b6
+ 1599 04fc 19       		.uleb128 0x19
+ 1600 04fd 01       		.uleb128 0x1
+ 1601 04fe 50       		.byte	0x50
+ 1602 04ff 03       		.uleb128 0x3
+ 1603 0500 0A       		.byte	0xa
+ 1604 0501 BF5D     		.2byte	0x5dbf
+ 1605 0503 00       		.byte	0
+ 1606 0504 00       		.byte	0
+ 1607 0505 1A       		.uleb128 0x1a
+ 1608 0506 0E010000 		.4byte	.LASF84
+ 1609 050a 01       		.byte	0x1
+ 1610 050b 44       		.byte	0x44
+ 1611 050c 51000000 		.4byte	0x51
+ 1612 0510 00000000 		.4byte	.LFB66
+ 1613 0514 64000000 		.4byte	.LFE66-.LFB66
+ 1614 0518 01       		.uleb128 0x1
+ 1615 0519 9C       		.byte	0x9c
+ 1616 051a 71050000 		.4byte	0x571
+ 1617 051e 1C       		.uleb128 0x1c
+ 1618 051f 6D6500   		.ascii	"me\000"
+ 1619 0522 01       		.byte	0x1
+ 1620 0523 44       		.byte	0x44
+ 1621 0524 77050000 		.4byte	0x577
+ 1622 0528 AE000000 		.4byte	.LLST3
+ 1623 052c 1D       		.uleb128 0x1d
+ 1624 052d F9000000 		.4byte	.LASF68
+ 1625 0531 01       		.byte	0x1
+ 1626 0532 44       		.byte	0x44
+ 1627 0533 DB020000 		.4byte	0x2db
+ 1628 0537 E5000000 		.4byte	.LLST4
+ 1629 053b 1C       		.uleb128 0x1c
+ 1630 053c 70696E00 		.ascii	"pin\000"
+ 1631 0540 01       		.byte	0x1
+ 1632 0541 44       		.byte	0x44
+ 1633 0542 BC000000 		.4byte	0xbc
+ 1634 0546 11010000 		.4byte	.LLST5
+ 1635 054a 1D       		.uleb128 0x1d
+ 1636 054b A7020000 		.4byte	.LASF67
+ 1637 054f 01       		.byte	0x1
+ 1638 0550 44       		.byte	0x44
+ 1639 0551 00010000 		.4byte	0x100
+ 1640 0555 3D010000 		.4byte	.LLST6
+ 1641 0559 18       		.uleb128 0x18
+ 1642 055a 10000000 		.4byte	.LVL20
+ 1643 055e C1090000 		.4byte	0x9c1
+ 1644 0562 19       		.uleb128 0x19
+ 1645 0563 01       		.uleb128 0x1
+ 1646 0564 50       		.byte	0x50
+ 1647 0565 02       		.uleb128 0x2
+ 1648 0566 74       		.byte	0x74
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 39
+
+
+ 1649 0567 00       		.sleb128 0
+ 1650 0568 19       		.uleb128 0x19
+ 1651 0569 01       		.uleb128 0x1
+ 1652 056a 51       		.byte	0x51
+ 1653 056b 03       		.uleb128 0x3
+ 1654 056c F3       		.byte	0xf3
+ 1655 056d 01       		.uleb128 0x1
+ 1656 056e 53       		.byte	0x53
+ 1657 056f 00       		.byte	0
+ 1658 0570 00       		.byte	0
+ 1659 0571 07       		.uleb128 0x7
+ 1660 0572 04       		.byte	0x4
+ 1661 0573 DC030000 		.4byte	0x3dc
+ 1662 0577 08       		.uleb128 0x8
+ 1663 0578 71050000 		.4byte	0x571
+ 1664 057c 1A       		.uleb128 0x1a
+ 1665 057d CB050000 		.4byte	.LASF85
+ 1666 0581 01       		.byte	0x1
+ 1667 0582 70       		.byte	0x70
+ 1668 0583 51000000 		.4byte	0x51
+ 1669 0587 00000000 		.4byte	.LFB67
+ 1670 058b 74000000 		.4byte	.LFE67-.LFB67
+ 1671 058f 01       		.uleb128 0x1
+ 1672 0590 9C       		.byte	0x9c
+ 1673 0591 CF050000 		.4byte	0x5cf
+ 1674 0595 1C       		.uleb128 0x1c
+ 1675 0596 6D6500   		.ascii	"me\000"
+ 1676 0599 01       		.byte	0x1
+ 1677 059a 70       		.byte	0x70
+ 1678 059b 77050000 		.4byte	0x577
+ 1679 059f 69010000 		.4byte	.LLST7
+ 1680 05a3 17       		.uleb128 0x17
+ 1681 05a4 2A000000 		.4byte	.LVL24
+ 1682 05a8 CC090000 		.4byte	0x9cc
+ 1683 05ac 1E       		.uleb128 0x1e
+ 1684 05ad 52000000 		.4byte	.LVL25
+ 1685 05b1 BB050000 		.4byte	0x5bb
+ 1686 05b5 19       		.uleb128 0x19
+ 1687 05b6 01       		.uleb128 0x1
+ 1688 05b7 50       		.byte	0x50
+ 1689 05b8 01       		.uleb128 0x1
+ 1690 05b9 31       		.byte	0x31
+ 1691 05ba 00       		.byte	0
+ 1692 05bb 18       		.uleb128 0x18
+ 1693 05bc 62000000 		.4byte	.LVL28
+ 1694 05c0 D7090000 		.4byte	0x9d7
+ 1695 05c4 19       		.uleb128 0x19
+ 1696 05c5 01       		.uleb128 0x1
+ 1697 05c6 50       		.byte	0x50
+ 1698 05c7 05       		.uleb128 0x5
+ 1699 05c8 03       		.byte	0x3
+ 1700 05c9 00000000 		.4byte	.LC0
+ 1701 05cd 00       		.byte	0
+ 1702 05ce 00       		.byte	0
+ 1703 05cf 1F       		.uleb128 0x1f
+ 1704 05d0 16000000 		.4byte	.LASF86
+ 1705 05d4 01       		.byte	0x1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 40
+
+
+ 1706 05d5 99       		.byte	0x99
+ 1707 05d6 51000000 		.4byte	0x51
+ 1708 05da 00000000 		.4byte	.LFB68
+ 1709 05de A4000000 		.4byte	.LFE68-.LFB68
+ 1710 05e2 01       		.uleb128 0x1
+ 1711 05e3 9C       		.byte	0x9c
+ 1712 05e4 35060000 		.4byte	0x635
+ 1713 05e8 1C       		.uleb128 0x1c
+ 1714 05e9 6D6500   		.ascii	"me\000"
+ 1715 05ec 01       		.byte	0x1
+ 1716 05ed 99       		.byte	0x99
+ 1717 05ee 71050000 		.4byte	0x571
+ 1718 05f2 A0010000 		.4byte	.LLST8
+ 1719 05f6 20       		.uleb128 0x20
+ 1720 05f7 18000000 		.4byte	.LBB2
+ 1721 05fb 1A000000 		.4byte	.LBE2-.LBB2
+ 1722 05ff 12060000 		.4byte	0x612
+ 1723 0603 21       		.uleb128 0x21
+ 1724 0604 6D7300   		.ascii	"ms\000"
+ 1725 0607 01       		.byte	0x1
+ 1726 0608 9D       		.byte	0x9d
+ 1727 0609 DD000000 		.4byte	0xdd
+ 1728 060d 1F020000 		.4byte	.LLST9
+ 1729 0611 00       		.byte	0
+ 1730 0612 1E       		.uleb128 0x1e
+ 1731 0613 5E000000 		.4byte	.LVL35
+ 1732 0617 21060000 		.4byte	0x621
+ 1733 061b 19       		.uleb128 0x19
+ 1734 061c 01       		.uleb128 0x1
+ 1735 061d 50       		.byte	0x50
+ 1736 061e 01       		.uleb128 0x1
+ 1737 061f 30       		.byte	0x30
+ 1738 0620 00       		.byte	0
+ 1739 0621 18       		.uleb128 0x18
+ 1740 0622 90000000 		.4byte	.LVL41
+ 1741 0626 D7090000 		.4byte	0x9d7
+ 1742 062a 19       		.uleb128 0x19
+ 1743 062b 01       		.uleb128 0x1
+ 1744 062c 50       		.byte	0x50
+ 1745 062d 05       		.uleb128 0x5
+ 1746 062e 03       		.byte	0x3
+ 1747 062f 00000000 		.4byte	.LC0
+ 1748 0633 00       		.byte	0
+ 1749 0634 00       		.byte	0
+ 1750 0635 1A       		.uleb128 0x1a
+ 1751 0636 6F050000 		.4byte	.LASF87
+ 1752 063a 01       		.byte	0x1
+ 1753 063b C2       		.byte	0xc2
+ 1754 063c 51000000 		.4byte	0x51
+ 1755 0640 00000000 		.4byte	.LFB69
+ 1756 0644 80000000 		.4byte	.LFE69-.LFB69
+ 1757 0648 01       		.uleb128 0x1
+ 1758 0649 9C       		.byte	0x9c
+ 1759 064a 88060000 		.4byte	0x688
+ 1760 064e 1C       		.uleb128 0x1c
+ 1761 064f 6D6500   		.ascii	"me\000"
+ 1762 0652 01       		.byte	0x1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 41
+
+
+ 1763 0653 C2       		.byte	0xc2
+ 1764 0654 71050000 		.4byte	0x571
+ 1765 0658 32020000 		.4byte	.LLST10
+ 1766 065c 17       		.uleb128 0x17
+ 1767 065d 38000000 		.4byte	.LVL44
+ 1768 0661 E2090000 		.4byte	0x9e2
+ 1769 0665 1E       		.uleb128 0x1e
+ 1770 0666 5E000000 		.4byte	.LVL45
+ 1771 066a 74060000 		.4byte	0x674
+ 1772 066e 19       		.uleb128 0x19
+ 1773 066f 01       		.uleb128 0x1
+ 1774 0670 50       		.byte	0x50
+ 1775 0671 01       		.uleb128 0x1
+ 1776 0672 30       		.byte	0x30
+ 1777 0673 00       		.byte	0
+ 1778 0674 18       		.uleb128 0x18
+ 1779 0675 6E000000 		.4byte	.LVL48
+ 1780 0679 D7090000 		.4byte	0x9d7
+ 1781 067d 19       		.uleb128 0x19
+ 1782 067e 01       		.uleb128 0x1
+ 1783 067f 50       		.byte	0x50
+ 1784 0680 05       		.uleb128 0x5
+ 1785 0681 03       		.byte	0x3
+ 1786 0682 00000000 		.4byte	.LC0
+ 1787 0686 00       		.byte	0
+ 1788 0687 00       		.byte	0
+ 1789 0688 1A       		.uleb128 0x1a
+ 1790 0689 17060000 		.4byte	.LASF88
+ 1791 068d 01       		.byte	0x1
+ 1792 068e EA       		.byte	0xea
+ 1793 068f 51000000 		.4byte	0x51
+ 1794 0693 00000000 		.4byte	.LFB70
+ 1795 0697 60000000 		.4byte	.LFE70-.LFB70
+ 1796 069b 01       		.uleb128 0x1
+ 1797 069c 9C       		.byte	0x9c
+ 1798 069d DB060000 		.4byte	0x6db
+ 1799 06a1 1C       		.uleb128 0x1c
+ 1800 06a2 6D6500   		.ascii	"me\000"
+ 1801 06a5 01       		.byte	0x1
+ 1802 06a6 EA       		.byte	0xea
+ 1803 06a7 71050000 		.4byte	0x571
+ 1804 06ab 69020000 		.4byte	.LLST11
+ 1805 06af 17       		.uleb128 0x17
+ 1806 06b0 2C000000 		.4byte	.LVL50
+ 1807 06b4 CC090000 		.4byte	0x9cc
+ 1808 06b8 1E       		.uleb128 0x1e
+ 1809 06b9 44000000 		.4byte	.LVL51
+ 1810 06bd C7060000 		.4byte	0x6c7
+ 1811 06c1 19       		.uleb128 0x19
+ 1812 06c2 01       		.uleb128 0x1
+ 1813 06c3 50       		.byte	0x50
+ 1814 06c4 01       		.uleb128 0x1
+ 1815 06c5 31       		.byte	0x31
+ 1816 06c6 00       		.byte	0
+ 1817 06c7 18       		.uleb128 0x18
+ 1818 06c8 54000000 		.4byte	.LVL54
+ 1819 06cc D7090000 		.4byte	0x9d7
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 42
+
+
+ 1820 06d0 19       		.uleb128 0x19
+ 1821 06d1 01       		.uleb128 0x1
+ 1822 06d2 50       		.byte	0x50
+ 1823 06d3 05       		.uleb128 0x5
+ 1824 06d4 03       		.byte	0x3
+ 1825 06d5 00000000 		.4byte	.LC0
+ 1826 06d9 00       		.byte	0
+ 1827 06da 00       		.byte	0
+ 1828 06db 22       		.uleb128 0x22
+ 1829 06dc 1E050000 		.4byte	.LASF89
+ 1830 06e0 01       		.byte	0x1
+ 1831 06e1 0D01     		.2byte	0x10d
+ 1832 06e3 51000000 		.4byte	0x51
+ 1833 06e7 00000000 		.4byte	.LFB71
+ 1834 06eb E4000000 		.4byte	.LFE71-.LFB71
+ 1835 06ef 01       		.uleb128 0x1
+ 1836 06f0 9C       		.byte	0x9c
+ 1837 06f1 98080000 		.4byte	0x898
+ 1838 06f5 23       		.uleb128 0x23
+ 1839 06f6 6D6500   		.ascii	"me\000"
+ 1840 06f9 01       		.byte	0x1
+ 1841 06fa 0D01     		.2byte	0x10d
+ 1842 06fc 77050000 		.4byte	0x577
+ 1843 0700 A0020000 		.4byte	.LLST12
+ 1844 0704 24       		.uleb128 0x24
+ 1845 0705 C7040000 		.4byte	.LASF90
+ 1846 0709 01       		.byte	0x1
+ 1847 070a 0E01     		.2byte	0x10e
+ 1848 070c 98080000 		.4byte	0x898
+ 1849 0710 03       		.uleb128 0x3
+ 1850 0711 91       		.byte	0x91
+ 1851 0712 F07E     		.sleb128 -144
+ 1852 0714 1B       		.uleb128 0x1b
+ 1853 0715 10000000 		.4byte	.LVL57
+ 1854 0719 ED090000 		.4byte	0x9ed
+ 1855 071d 33070000 		.4byte	0x733
+ 1856 0721 19       		.uleb128 0x19
+ 1857 0722 01       		.uleb128 0x1
+ 1858 0723 50       		.byte	0x50
+ 1859 0724 02       		.uleb128 0x2
+ 1860 0725 7D       		.byte	0x7d
+ 1861 0726 00       		.sleb128 0
+ 1862 0727 19       		.uleb128 0x19
+ 1863 0728 01       		.uleb128 0x1
+ 1864 0729 51       		.byte	0x51
+ 1865 072a 01       		.uleb128 0x1
+ 1866 072b 30       		.byte	0x30
+ 1867 072c 19       		.uleb128 0x19
+ 1868 072d 01       		.uleb128 0x1
+ 1869 072e 52       		.byte	0x52
+ 1870 072f 02       		.uleb128 0x2
+ 1871 0730 08       		.byte	0x8
+ 1872 0731 80       		.byte	0x80
+ 1873 0732 00       		.byte	0
+ 1874 0733 1B       		.uleb128 0x1b
+ 1875 0734 16000000 		.4byte	.LVL58
+ 1876 0738 D7090000 		.4byte	0x9d7
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 43
+
+
+ 1877 073c 4A070000 		.4byte	0x74a
+ 1878 0740 19       		.uleb128 0x19
+ 1879 0741 01       		.uleb128 0x1
+ 1880 0742 50       		.byte	0x50
+ 1881 0743 05       		.uleb128 0x5
+ 1882 0744 03       		.byte	0x3
+ 1883 0745 10000000 		.4byte	.LC1
+ 1884 0749 00       		.byte	0
+ 1885 074a 1B       		.uleb128 0x1b
+ 1886 074b 1C000000 		.4byte	.LVL59
+ 1887 074f D7090000 		.4byte	0x9d7
+ 1888 0753 5E070000 		.4byte	0x75e
+ 1889 0757 19       		.uleb128 0x19
+ 1890 0758 01       		.uleb128 0x1
+ 1891 0759 50       		.byte	0x50
+ 1892 075a 02       		.uleb128 0x2
+ 1893 075b 74       		.byte	0x74
+ 1894 075c 00       		.sleb128 0
+ 1895 075d 00       		.byte	0
+ 1896 075e 1B       		.uleb128 0x1b
+ 1897 075f 2A000000 		.4byte	.LVL60
+ 1898 0763 F6090000 		.4byte	0x9f6
+ 1899 0767 72070000 		.4byte	0x772
+ 1900 076b 19       		.uleb128 0x19
+ 1901 076c 01       		.uleb128 0x1
+ 1902 076d 50       		.byte	0x50
+ 1903 076e 02       		.uleb128 0x2
+ 1904 076f 7D       		.byte	0x7d
+ 1905 0770 00       		.sleb128 0
+ 1906 0771 00       		.byte	0
+ 1907 0772 1B       		.uleb128 0x1b
+ 1908 0773 36000000 		.4byte	.LVL61
+ 1909 0777 010A0000 		.4byte	0xa01
+ 1910 077b 8F070000 		.4byte	0x78f
+ 1911 077f 19       		.uleb128 0x19
+ 1912 0780 01       		.uleb128 0x1
+ 1913 0781 51       		.byte	0x51
+ 1914 0782 02       		.uleb128 0x2
+ 1915 0783 75       		.byte	0x75
+ 1916 0784 00       		.sleb128 0
+ 1917 0785 19       		.uleb128 0x19
+ 1918 0786 01       		.uleb128 0x1
+ 1919 0787 52       		.byte	0x52
+ 1920 0788 05       		.uleb128 0x5
+ 1921 0789 03       		.byte	0x3
+ 1922 078a 14000000 		.4byte	.LC2
+ 1923 078e 00       		.byte	0
+ 1924 078f 1B       		.uleb128 0x1b
+ 1925 0790 3C000000 		.4byte	.LVL62
+ 1926 0794 F6090000 		.4byte	0x9f6
+ 1927 0798 A3070000 		.4byte	0x7a3
+ 1928 079c 19       		.uleb128 0x19
+ 1929 079d 01       		.uleb128 0x1
+ 1930 079e 50       		.byte	0x50
+ 1931 079f 02       		.uleb128 0x2
+ 1932 07a0 7D       		.byte	0x7d
+ 1933 07a1 00       		.sleb128 0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 44
+
+
+ 1934 07a2 00       		.byte	0
+ 1935 07a3 1B       		.uleb128 0x1b
+ 1936 07a4 46000000 		.4byte	.LVL63
+ 1937 07a8 010A0000 		.4byte	0xa01
+ 1938 07ac BA070000 		.4byte	0x7ba
+ 1939 07b0 19       		.uleb128 0x19
+ 1940 07b1 01       		.uleb128 0x1
+ 1941 07b2 51       		.byte	0x51
+ 1942 07b3 05       		.uleb128 0x5
+ 1943 07b4 03       		.byte	0x3
+ 1944 07b5 30000000 		.4byte	.LC4
+ 1945 07b9 00       		.byte	0
+ 1946 07ba 1B       		.uleb128 0x1b
+ 1947 07bb 4C000000 		.4byte	.LVL64
+ 1948 07bf F6090000 		.4byte	0x9f6
+ 1949 07c3 CE070000 		.4byte	0x7ce
+ 1950 07c7 19       		.uleb128 0x19
+ 1951 07c8 01       		.uleb128 0x1
+ 1952 07c9 50       		.byte	0x50
+ 1953 07ca 02       		.uleb128 0x2
+ 1954 07cb 7D       		.byte	0x7d
+ 1955 07cc 00       		.sleb128 0
+ 1956 07cd 00       		.byte	0
+ 1957 07ce 1B       		.uleb128 0x1b
+ 1958 07cf 56000000 		.4byte	.LVL65
+ 1959 07d3 010A0000 		.4byte	0xa01
+ 1960 07d7 EB070000 		.4byte	0x7eb
+ 1961 07db 19       		.uleb128 0x19
+ 1962 07dc 01       		.uleb128 0x1
+ 1963 07dd 51       		.byte	0x51
+ 1964 07de 02       		.uleb128 0x2
+ 1965 07df 75       		.byte	0x75
+ 1966 07e0 00       		.sleb128 0
+ 1967 07e1 19       		.uleb128 0x19
+ 1968 07e2 01       		.uleb128 0x1
+ 1969 07e3 52       		.byte	0x52
+ 1970 07e4 05       		.uleb128 0x5
+ 1971 07e5 03       		.byte	0x3
+ 1972 07e6 34000000 		.4byte	.LC5
+ 1973 07ea 00       		.byte	0
+ 1974 07eb 1B       		.uleb128 0x1b
+ 1975 07ec 5C000000 		.4byte	.LVL66
+ 1976 07f0 F6090000 		.4byte	0x9f6
+ 1977 07f4 FF070000 		.4byte	0x7ff
+ 1978 07f8 19       		.uleb128 0x19
+ 1979 07f9 01       		.uleb128 0x1
+ 1980 07fa 50       		.byte	0x50
+ 1981 07fb 02       		.uleb128 0x2
+ 1982 07fc 7D       		.byte	0x7d
+ 1983 07fd 00       		.sleb128 0
+ 1984 07fe 00       		.byte	0
+ 1985 07ff 1B       		.uleb128 0x1b
+ 1986 0800 8C000000 		.4byte	.LVL73
+ 1987 0804 010A0000 		.4byte	0xa01
+ 1988 0808 28080000 		.4byte	0x828
+ 1989 080c 19       		.uleb128 0x19
+ 1990 080d 01       		.uleb128 0x1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 45
+
+
+ 1991 080e 50       		.byte	0x50
+ 1992 080f 08       		.uleb128 0x8
+ 1993 0810 91       		.byte	0x91
+ 1994 0811 00       		.sleb128 0
+ 1995 0812 75       		.byte	0x75
+ 1996 0813 00       		.sleb128 0
+ 1997 0814 22       		.byte	0x22
+ 1998 0815 08       		.byte	0x8
+ 1999 0816 90       		.byte	0x90
+ 2000 0817 1C       		.byte	0x1c
+ 2001 0818 19       		.uleb128 0x19
+ 2002 0819 01       		.uleb128 0x1
+ 2003 081a 51       		.byte	0x51
+ 2004 081b 05       		.uleb128 0x5
+ 2005 081c 03       		.byte	0x3
+ 2006 081d 44000000 		.4byte	.LC6
+ 2007 0821 19       		.uleb128 0x19
+ 2008 0822 01       		.uleb128 0x1
+ 2009 0823 52       		.byte	0x52
+ 2010 0824 02       		.uleb128 0x2
+ 2011 0825 76       		.byte	0x76
+ 2012 0826 00       		.sleb128 0
+ 2013 0827 00       		.byte	0
+ 2014 0828 1B       		.uleb128 0x1b
+ 2015 0829 9C000000 		.4byte	.LVL75
+ 2016 082d F6090000 		.4byte	0x9f6
+ 2017 0831 3C080000 		.4byte	0x83c
+ 2018 0835 19       		.uleb128 0x19
+ 2019 0836 01       		.uleb128 0x1
+ 2020 0837 50       		.byte	0x50
+ 2021 0838 02       		.uleb128 0x2
+ 2022 0839 7D       		.byte	0x7d
+ 2023 083a 00       		.sleb128 0
+ 2024 083b 00       		.byte	0
+ 2025 083c 1B       		.uleb128 0x1b
+ 2026 083d A6000000 		.4byte	.LVL76
+ 2027 0841 010A0000 		.4byte	0xa01
+ 2028 0845 5C080000 		.4byte	0x85c
+ 2029 0849 19       		.uleb128 0x19
+ 2030 084a 01       		.uleb128 0x1
+ 2031 084b 51       		.byte	0x51
+ 2032 084c 05       		.uleb128 0x5
+ 2033 084d 03       		.byte	0x3
+ 2034 084e 28000000 		.4byte	.LC3
+ 2035 0852 19       		.uleb128 0x19
+ 2036 0853 01       		.uleb128 0x1
+ 2037 0854 52       		.byte	0x52
+ 2038 0855 05       		.uleb128 0x5
+ 2039 0856 03       		.byte	0x3
+ 2040 0857 34000000 		.4byte	.LC5
+ 2041 085b 00       		.byte	0
+ 2042 085c 1B       		.uleb128 0x1b
+ 2043 085d AC000000 		.4byte	.LVL77
+ 2044 0861 F6090000 		.4byte	0x9f6
+ 2045 0865 70080000 		.4byte	0x870
+ 2046 0869 19       		.uleb128 0x19
+ 2047 086a 01       		.uleb128 0x1
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 46
+
+
+ 2048 086b 50       		.byte	0x50
+ 2049 086c 02       		.uleb128 0x2
+ 2050 086d 7D       		.byte	0x7d
+ 2051 086e 00       		.sleb128 0
+ 2052 086f 00       		.byte	0
+ 2053 0870 1B       		.uleb128 0x1b
+ 2054 0871 B6000000 		.4byte	.LVL78
+ 2055 0875 010A0000 		.4byte	0xa01
+ 2056 0879 87080000 		.4byte	0x887
+ 2057 087d 19       		.uleb128 0x19
+ 2058 087e 01       		.uleb128 0x1
+ 2059 087f 51       		.byte	0x51
+ 2060 0880 05       		.uleb128 0x5
+ 2061 0881 03       		.byte	0x3
+ 2062 0882 54000000 		.4byte	.LC7
+ 2063 0886 00       		.byte	0
+ 2064 0887 18       		.uleb128 0x18
+ 2065 0888 BC000000 		.4byte	.LVL79
+ 2066 088c D7090000 		.4byte	0x9d7
+ 2067 0890 19       		.uleb128 0x19
+ 2068 0891 01       		.uleb128 0x1
+ 2069 0892 50       		.byte	0x50
+ 2070 0893 02       		.uleb128 0x2
+ 2071 0894 7D       		.byte	0x7d
+ 2072 0895 00       		.sleb128 0
+ 2073 0896 00       		.byte	0
+ 2074 0897 00       		.byte	0
+ 2075 0898 0A       		.uleb128 0xa
+ 2076 0899 EB000000 		.4byte	0xeb
+ 2077 089d A8080000 		.4byte	0x8a8
+ 2078 08a1 0B       		.uleb128 0xb
+ 2079 08a2 F9000000 		.4byte	0xf9
+ 2080 08a6 7F       		.byte	0x7f
+ 2081 08a7 00       		.byte	0
+ 2082 08a8 25       		.uleb128 0x25
+ 2083 08a9 89000000 		.4byte	.LASF91
+ 2084 08ad 01       		.byte	0x1
+ 2085 08ae 2D01     		.2byte	0x12d
+ 2086 08b0 51000000 		.4byte	0x51
+ 2087 08b4 00000000 		.4byte	.LFB72
+ 2088 08b8 38000000 		.4byte	.LFE72-.LFB72
+ 2089 08bc 01       		.uleb128 0x1
+ 2090 08bd 9C       		.byte	0x9c
+ 2091 08be 0A090000 		.4byte	0x90a
+ 2092 08c2 20       		.uleb128 0x20
+ 2093 08c3 08000000 		.4byte	.LBB3
+ 2094 08c7 20000000 		.4byte	.LBE3-.LBB3
+ 2095 08cb F6080000 		.4byte	0x8f6
+ 2096 08cf 26       		.uleb128 0x26
+ 2097 08d0 6900     		.ascii	"i\000"
+ 2098 08d2 01       		.byte	0x1
+ 2099 08d3 3001     		.2byte	0x130
+ 2100 08d5 D2000000 		.4byte	0xd2
+ 2101 08d9 E5020000 		.4byte	.LLST13
+ 2102 08dd 18       		.uleb128 0x18
+ 2103 08de 22000000 		.4byte	.LVL82
+ 2104 08e2 DB060000 		.4byte	0x6db
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 47
+
+
+ 2105 08e6 19       		.uleb128 0x19
+ 2106 08e7 01       		.uleb128 0x1
+ 2107 08e8 50       		.byte	0x50
+ 2108 08e9 0A       		.uleb128 0xa
+ 2109 08ea 74       		.byte	0x74
+ 2110 08eb 00       		.sleb128 0
+ 2111 08ec 36       		.byte	0x36
+ 2112 08ed 24       		.byte	0x24
+ 2113 08ee 03       		.byte	0x3
+ 2114 08ef 08000000 		.4byte	.LANCHOR0+8
+ 2115 08f3 22       		.byte	0x22
+ 2116 08f4 00       		.byte	0
+ 2117 08f5 00       		.byte	0
+ 2118 08f6 18       		.uleb128 0x18
+ 2119 08f7 08000000 		.4byte	.LVL80
+ 2120 08fb D7090000 		.4byte	0x9d7
+ 2121 08ff 19       		.uleb128 0x19
+ 2122 0900 01       		.uleb128 0x1
+ 2123 0901 50       		.byte	0x50
+ 2124 0902 05       		.uleb128 0x5
+ 2125 0903 03       		.byte	0x3
+ 2126 0904 5C000000 		.4byte	.LC8
+ 2127 0908 00       		.byte	0
+ 2128 0909 00       		.byte	0
+ 2129 090a 0A       		.uleb128 0xa
+ 2130 090b DC030000 		.4byte	0x3dc
+ 2131 090f 1A090000 		.4byte	0x91a
+ 2132 0913 0B       		.uleb128 0xb
+ 2133 0914 F9000000 		.4byte	0xf9
+ 2134 0918 07       		.byte	0x7
+ 2135 0919 00       		.byte	0
+ 2136 091a 27       		.uleb128 0x27
+ 2137 091b 86030000 		.4byte	.LASF92
+ 2138 091f 01       		.byte	0x1
+ 2139 0920 10       		.byte	0x10
+ 2140 0921 0A090000 		.4byte	0x90a
+ 2141 0925 05       		.uleb128 0x5
+ 2142 0926 03       		.byte	0x3
+ 2143 0927 08000000 		.4byte	analyzers
+ 2144 092b 27       		.uleb128 0x27
+ 2145 092c D6020000 		.4byte	.LASF93
+ 2146 0930 01       		.byte	0x1
+ 2147 0931 11       		.byte	0x11
+ 2148 0932 0B010000 		.4byte	0x10b
+ 2149 0936 05       		.uleb128 0x5
+ 2150 0937 03       		.byte	0x3
+ 2151 0938 00000000 		.4byte	systickCounter
+ 2152 093c 27       		.uleb128 0x27
+ 2153 093d 5F040000 		.4byte	.LASF94
+ 2154 0941 01       		.byte	0x1
+ 2155 0942 12       		.byte	0x12
+ 2156 0943 D2000000 		.4byte	0xd2
+ 2157 0947 05       		.uleb128 0x5
+ 2158 0948 03       		.byte	0x3
+ 2159 0949 04000000 		.4byte	analyzerCount
+ 2160 094d 28       		.uleb128 0x28
+ 2161 094e C2000000 		.4byte	.LASF95
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 48
+
+
+ 2162 0952 01       		.byte	0x1
+ 2163 0953 19       		.byte	0x19
+ 2164 0954 E6020000 		.4byte	0x2e6
+ 2165 0958 28       		.uleb128 0x28
+ 2166 0959 99050000 		.4byte	.LASF96
+ 2167 095d 01       		.byte	0x1
+ 2168 095e 1A       		.byte	0x1a
+ 2169 095f E6020000 		.4byte	0x2e6
+ 2170 0963 28       		.uleb128 0x28
+ 2171 0964 0D050000 		.4byte	.LASF97
+ 2172 0968 01       		.byte	0x1
+ 2173 0969 1B       		.byte	0x1b
+ 2174 096a E6020000 		.4byte	0x2e6
+ 2175 096e 29       		.uleb128 0x29
+ 2176 096f E0050000 		.4byte	.LASF114
+ 2177 0973 05       		.byte	0x5
+ 2178 0974 1207     		.2byte	0x712
+ 2179 0976 7A090000 		.4byte	0x97a
+ 2180 097a 09       		.uleb128 0x9
+ 2181 097b C7000000 		.4byte	0xc7
+ 2182 097f 2A       		.uleb128 0x2a
+ 2183 0980 F6050000 		.4byte	.LASF98
+ 2184 0984 F6050000 		.4byte	.LASF98
+ 2185 0988 07       		.byte	0x7
+ 2186 0989 26       		.byte	0x26
+ 2187 098a 2A       		.uleb128 0x2a
+ 2188 098b FE000000 		.4byte	.LASF99
+ 2189 098f FE000000 		.4byte	.LASF99
+ 2190 0993 08       		.byte	0x8
+ 2191 0994 26       		.byte	0x26
+ 2192 0995 2A       		.uleb128 0x2a
+ 2193 0996 A9050000 		.4byte	.LASF100
+ 2194 099a A9050000 		.4byte	.LASF100
+ 2195 099e 09       		.byte	0x9
+ 2196 099f 26       		.byte	0x26
+ 2197 09a0 2A       		.uleb128 0x2a
+ 2198 09a1 84050000 		.4byte	.LASF101
+ 2199 09a5 84050000 		.4byte	.LASF101
+ 2200 09a9 0A       		.byte	0xa
+ 2201 09aa AF       		.byte	0xaf
+ 2202 09ab 2A       		.uleb128 0x2a
+ 2203 09ac 37020000 		.4byte	.LASF102
+ 2204 09b0 37020000 		.4byte	.LASF102
+ 2205 09b4 0A       		.byte	0xa
+ 2206 09b5 B7       		.byte	0xb7
+ 2207 09b6 2A       		.uleb128 0x2a
+ 2208 09b7 3C010000 		.4byte	.LASF103
+ 2209 09bb 3C010000 		.4byte	.LASF103
+ 2210 09bf 0A       		.byte	0xa
+ 2211 09c0 B4       		.byte	0xb4
+ 2212 09c1 2A       		.uleb128 0x2a
+ 2213 09c2 A2040000 		.4byte	.LASF104
+ 2214 09c6 A2040000 		.4byte	.LASF104
+ 2215 09ca 0B       		.byte	0xb
+ 2216 09cb 1E       		.byte	0x1e
+ 2217 09cc 2A       		.uleb128 0x2a
+ 2218 09cd 49000000 		.4byte	.LASF105
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 49
+
+
+ 2219 09d1 49000000 		.4byte	.LASF105
+ 2220 09d5 0A       		.byte	0xa
+ 2221 09d6 B0       		.byte	0xb0
+ 2222 09d7 2A       		.uleb128 0x2a
+ 2223 09d8 24010000 		.4byte	.LASF106
+ 2224 09dc 24010000 		.4byte	.LASF106
+ 2225 09e0 0C       		.byte	0xc
+ 2226 09e1 8B       		.byte	0x8b
+ 2227 09e2 2A       		.uleb128 0x2a
+ 2228 09e3 B9040000 		.4byte	.LASF107
+ 2229 09e7 B9040000 		.4byte	.LASF107
+ 2230 09eb 0A       		.byte	0xa
+ 2231 09ec B1       		.byte	0xb1
+ 2232 09ed 2B       		.uleb128 0x2b
+ 2233 09ee F1010000 		.4byte	.LASF115
+ 2234 09f2 F1010000 		.4byte	.LASF115
+ 2235 09f6 2A       		.uleb128 0x2a
+ 2236 09f7 AA000000 		.4byte	.LASF108
+ 2237 09fb AA000000 		.4byte	.LASF108
+ 2238 09ff 0B       		.byte	0xb
+ 2239 0a00 21       		.byte	0x21
+ 2240 0a01 2A       		.uleb128 0x2a
+ 2241 0a02 B0030000 		.4byte	.LASF109
+ 2242 0a06 B0030000 		.4byte	.LASF109
+ 2243 0a0a 0D       		.byte	0xd
+ 2244 0a0b E7       		.byte	0xe7
+ 2245 0a0c 00       		.byte	0
+ 2246              		.section	.debug_abbrev,"",%progbits
+ 2247              	.Ldebug_abbrev0:
+ 2248 0000 01       		.uleb128 0x1
+ 2249 0001 11       		.uleb128 0x11
+ 2250 0002 01       		.byte	0x1
+ 2251 0003 25       		.uleb128 0x25
+ 2252 0004 0E       		.uleb128 0xe
+ 2253 0005 13       		.uleb128 0x13
+ 2254 0006 0B       		.uleb128 0xb
+ 2255 0007 03       		.uleb128 0x3
+ 2256 0008 0E       		.uleb128 0xe
+ 2257 0009 1B       		.uleb128 0x1b
+ 2258 000a 0E       		.uleb128 0xe
+ 2259 000b 55       		.uleb128 0x55
+ 2260 000c 17       		.uleb128 0x17
+ 2261 000d 11       		.uleb128 0x11
+ 2262 000e 01       		.uleb128 0x1
+ 2263 000f 10       		.uleb128 0x10
+ 2264 0010 17       		.uleb128 0x17
+ 2265 0011 00       		.byte	0
+ 2266 0012 00       		.byte	0
+ 2267 0013 02       		.uleb128 0x2
+ 2268 0014 04       		.uleb128 0x4
+ 2269 0015 01       		.byte	0x1
+ 2270 0016 0B       		.uleb128 0xb
+ 2271 0017 0B       		.uleb128 0xb
+ 2272 0018 49       		.uleb128 0x49
+ 2273 0019 13       		.uleb128 0x13
+ 2274 001a 3A       		.uleb128 0x3a
+ 2275 001b 0B       		.uleb128 0xb
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 50
+
+
+ 2276 001c 3B       		.uleb128 0x3b
+ 2277 001d 0B       		.uleb128 0xb
+ 2278 001e 01       		.uleb128 0x1
+ 2279 001f 13       		.uleb128 0x13
+ 2280 0020 00       		.byte	0
+ 2281 0021 00       		.byte	0
+ 2282 0022 03       		.uleb128 0x3
+ 2283 0023 28       		.uleb128 0x28
+ 2284 0024 00       		.byte	0
+ 2285 0025 03       		.uleb128 0x3
+ 2286 0026 0E       		.uleb128 0xe
+ 2287 0027 1C       		.uleb128 0x1c
+ 2288 0028 0B       		.uleb128 0xb
+ 2289 0029 00       		.byte	0
+ 2290 002a 00       		.byte	0
+ 2291 002b 04       		.uleb128 0x4
+ 2292 002c 24       		.uleb128 0x24
+ 2293 002d 00       		.byte	0
+ 2294 002e 0B       		.uleb128 0xb
+ 2295 002f 0B       		.uleb128 0xb
+ 2296 0030 3E       		.uleb128 0x3e
+ 2297 0031 0B       		.uleb128 0xb
+ 2298 0032 03       		.uleb128 0x3
+ 2299 0033 0E       		.uleb128 0xe
+ 2300 0034 00       		.byte	0
+ 2301 0035 00       		.byte	0
+ 2302 0036 05       		.uleb128 0x5
+ 2303 0037 16       		.uleb128 0x16
+ 2304 0038 00       		.byte	0
+ 2305 0039 03       		.uleb128 0x3
+ 2306 003a 0E       		.uleb128 0xe
+ 2307 003b 3A       		.uleb128 0x3a
+ 2308 003c 0B       		.uleb128 0xb
+ 2309 003d 3B       		.uleb128 0x3b
+ 2310 003e 0B       		.uleb128 0xb
+ 2311 003f 49       		.uleb128 0x49
+ 2312 0040 13       		.uleb128 0x13
+ 2313 0041 00       		.byte	0
+ 2314 0042 00       		.byte	0
+ 2315 0043 06       		.uleb128 0x6
+ 2316 0044 24       		.uleb128 0x24
+ 2317 0045 00       		.byte	0
+ 2318 0046 0B       		.uleb128 0xb
+ 2319 0047 0B       		.uleb128 0xb
+ 2320 0048 3E       		.uleb128 0x3e
+ 2321 0049 0B       		.uleb128 0xb
+ 2322 004a 03       		.uleb128 0x3
+ 2323 004b 08       		.uleb128 0x8
+ 2324 004c 00       		.byte	0
+ 2325 004d 00       		.byte	0
+ 2326 004e 07       		.uleb128 0x7
+ 2327 004f 0F       		.uleb128 0xf
+ 2328 0050 00       		.byte	0
+ 2329 0051 0B       		.uleb128 0xb
+ 2330 0052 0B       		.uleb128 0xb
+ 2331 0053 49       		.uleb128 0x49
+ 2332 0054 13       		.uleb128 0x13
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 51
+
+
+ 2333 0055 00       		.byte	0
+ 2334 0056 00       		.byte	0
+ 2335 0057 08       		.uleb128 0x8
+ 2336 0058 26       		.uleb128 0x26
+ 2337 0059 00       		.byte	0
+ 2338 005a 49       		.uleb128 0x49
+ 2339 005b 13       		.uleb128 0x13
+ 2340 005c 00       		.byte	0
+ 2341 005d 00       		.byte	0
+ 2342 005e 09       		.uleb128 0x9
+ 2343 005f 35       		.uleb128 0x35
+ 2344 0060 00       		.byte	0
+ 2345 0061 49       		.uleb128 0x49
+ 2346 0062 13       		.uleb128 0x13
+ 2347 0063 00       		.byte	0
+ 2348 0064 00       		.byte	0
+ 2349 0065 0A       		.uleb128 0xa
+ 2350 0066 01       		.uleb128 0x1
+ 2351 0067 01       		.byte	0x1
+ 2352 0068 49       		.uleb128 0x49
+ 2353 0069 13       		.uleb128 0x13
+ 2354 006a 01       		.uleb128 0x1
+ 2355 006b 13       		.uleb128 0x13
+ 2356 006c 00       		.byte	0
+ 2357 006d 00       		.byte	0
+ 2358 006e 0B       		.uleb128 0xb
+ 2359 006f 21       		.uleb128 0x21
+ 2360 0070 00       		.byte	0
+ 2361 0071 49       		.uleb128 0x49
+ 2362 0072 13       		.uleb128 0x13
+ 2363 0073 2F       		.uleb128 0x2f
+ 2364 0074 0B       		.uleb128 0xb
+ 2365 0075 00       		.byte	0
+ 2366 0076 00       		.byte	0
+ 2367 0077 0C       		.uleb128 0xc
+ 2368 0078 13       		.uleb128 0x13
+ 2369 0079 01       		.byte	0x1
+ 2370 007a 0B       		.uleb128 0xb
+ 2371 007b 0B       		.uleb128 0xb
+ 2372 007c 3A       		.uleb128 0x3a
+ 2373 007d 0B       		.uleb128 0xb
+ 2374 007e 3B       		.uleb128 0x3b
+ 2375 007f 05       		.uleb128 0x5
+ 2376 0080 01       		.uleb128 0x1
+ 2377 0081 13       		.uleb128 0x13
+ 2378 0082 00       		.byte	0
+ 2379 0083 00       		.byte	0
+ 2380 0084 0D       		.uleb128 0xd
+ 2381 0085 0D       		.uleb128 0xd
+ 2382 0086 00       		.byte	0
+ 2383 0087 03       		.uleb128 0x3
+ 2384 0088 0E       		.uleb128 0xe
+ 2385 0089 3A       		.uleb128 0x3a
+ 2386 008a 0B       		.uleb128 0xb
+ 2387 008b 3B       		.uleb128 0x3b
+ 2388 008c 05       		.uleb128 0x5
+ 2389 008d 49       		.uleb128 0x49
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 52
+
+
+ 2390 008e 13       		.uleb128 0x13
+ 2391 008f 38       		.uleb128 0x38
+ 2392 0090 0B       		.uleb128 0xb
+ 2393 0091 00       		.byte	0
+ 2394 0092 00       		.byte	0
+ 2395 0093 0E       		.uleb128 0xe
+ 2396 0094 16       		.uleb128 0x16
+ 2397 0095 00       		.byte	0
+ 2398 0096 03       		.uleb128 0x3
+ 2399 0097 0E       		.uleb128 0xe
+ 2400 0098 3A       		.uleb128 0x3a
+ 2401 0099 0B       		.uleb128 0xb
+ 2402 009a 3B       		.uleb128 0x3b
+ 2403 009b 05       		.uleb128 0x5
+ 2404 009c 49       		.uleb128 0x49
+ 2405 009d 13       		.uleb128 0x13
+ 2406 009e 00       		.byte	0
+ 2407 009f 00       		.byte	0
+ 2408 00a0 0F       		.uleb128 0xf
+ 2409 00a1 15       		.uleb128 0x15
+ 2410 00a2 01       		.byte	0x1
+ 2411 00a3 27       		.uleb128 0x27
+ 2412 00a4 19       		.uleb128 0x19
+ 2413 00a5 01       		.uleb128 0x1
+ 2414 00a6 13       		.uleb128 0x13
+ 2415 00a7 00       		.byte	0
+ 2416 00a8 00       		.byte	0
+ 2417 00a9 10       		.uleb128 0x10
+ 2418 00aa 05       		.uleb128 0x5
+ 2419 00ab 00       		.byte	0
+ 2420 00ac 49       		.uleb128 0x49
+ 2421 00ad 13       		.uleb128 0x13
+ 2422 00ae 00       		.byte	0
+ 2423 00af 00       		.byte	0
+ 2424 00b0 11       		.uleb128 0x11
+ 2425 00b1 13       		.uleb128 0x13
+ 2426 00b2 01       		.byte	0x1
+ 2427 00b3 0B       		.uleb128 0xb
+ 2428 00b4 0B       		.uleb128 0xb
+ 2429 00b5 3A       		.uleb128 0x3a
+ 2430 00b6 0B       		.uleb128 0xb
+ 2431 00b7 3B       		.uleb128 0x3b
+ 2432 00b8 0B       		.uleb128 0xb
+ 2433 00b9 01       		.uleb128 0x1
+ 2434 00ba 13       		.uleb128 0x13
+ 2435 00bb 00       		.byte	0
+ 2436 00bc 00       		.byte	0
+ 2437 00bd 12       		.uleb128 0x12
+ 2438 00be 0D       		.uleb128 0xd
+ 2439 00bf 00       		.byte	0
+ 2440 00c0 03       		.uleb128 0x3
+ 2441 00c1 0E       		.uleb128 0xe
+ 2442 00c2 3A       		.uleb128 0x3a
+ 2443 00c3 0B       		.uleb128 0xb
+ 2444 00c4 3B       		.uleb128 0x3b
+ 2445 00c5 0B       		.uleb128 0xb
+ 2446 00c6 49       		.uleb128 0x49
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 53
+
+
+ 2447 00c7 13       		.uleb128 0x13
+ 2448 00c8 38       		.uleb128 0x38
+ 2449 00c9 0B       		.uleb128 0xb
+ 2450 00ca 00       		.byte	0
+ 2451 00cb 00       		.byte	0
+ 2452 00cc 13       		.uleb128 0x13
+ 2453 00cd 0D       		.uleb128 0xd
+ 2454 00ce 00       		.byte	0
+ 2455 00cf 03       		.uleb128 0x3
+ 2456 00d0 08       		.uleb128 0x8
+ 2457 00d1 3A       		.uleb128 0x3a
+ 2458 00d2 0B       		.uleb128 0xb
+ 2459 00d3 3B       		.uleb128 0x3b
+ 2460 00d4 0B       		.uleb128 0xb
+ 2461 00d5 49       		.uleb128 0x49
+ 2462 00d6 13       		.uleb128 0x13
+ 2463 00d7 38       		.uleb128 0x38
+ 2464 00d8 0B       		.uleb128 0xb
+ 2465 00d9 00       		.byte	0
+ 2466 00da 00       		.byte	0
+ 2467 00db 14       		.uleb128 0x14
+ 2468 00dc 2E       		.uleb128 0x2e
+ 2469 00dd 00       		.byte	0
+ 2470 00de 3F       		.uleb128 0x3f
+ 2471 00df 19       		.uleb128 0x19
+ 2472 00e0 03       		.uleb128 0x3
+ 2473 00e1 0E       		.uleb128 0xe
+ 2474 00e2 3A       		.uleb128 0x3a
+ 2475 00e3 0B       		.uleb128 0xb
+ 2476 00e4 3B       		.uleb128 0x3b
+ 2477 00e5 0B       		.uleb128 0xb
+ 2478 00e6 27       		.uleb128 0x27
+ 2479 00e7 19       		.uleb128 0x19
+ 2480 00e8 11       		.uleb128 0x11
+ 2481 00e9 01       		.uleb128 0x1
+ 2482 00ea 12       		.uleb128 0x12
+ 2483 00eb 06       		.uleb128 0x6
+ 2484 00ec 40       		.uleb128 0x40
+ 2485 00ed 18       		.uleb128 0x18
+ 2486 00ee 9742     		.uleb128 0x2117
+ 2487 00f0 19       		.uleb128 0x19
+ 2488 00f1 00       		.byte	0
+ 2489 00f2 00       		.byte	0
+ 2490 00f3 15       		.uleb128 0x15
+ 2491 00f4 2E       		.uleb128 0x2e
+ 2492 00f5 01       		.byte	0x1
+ 2493 00f6 3F       		.uleb128 0x3f
+ 2494 00f7 19       		.uleb128 0x19
+ 2495 00f8 03       		.uleb128 0x3
+ 2496 00f9 0E       		.uleb128 0xe
+ 2497 00fa 3A       		.uleb128 0x3a
+ 2498 00fb 0B       		.uleb128 0xb
+ 2499 00fc 3B       		.uleb128 0x3b
+ 2500 00fd 05       		.uleb128 0x5
+ 2501 00fe 27       		.uleb128 0x27
+ 2502 00ff 19       		.uleb128 0x19
+ 2503 0100 11       		.uleb128 0x11
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 54
+
+
+ 2504 0101 01       		.uleb128 0x1
+ 2505 0102 12       		.uleb128 0x12
+ 2506 0103 06       		.uleb128 0x6
+ 2507 0104 40       		.uleb128 0x40
+ 2508 0105 18       		.uleb128 0x18
+ 2509 0106 9742     		.uleb128 0x2117
+ 2510 0108 19       		.uleb128 0x19
+ 2511 0109 01       		.uleb128 0x1
+ 2512 010a 13       		.uleb128 0x13
+ 2513 010b 00       		.byte	0
+ 2514 010c 00       		.byte	0
+ 2515 010d 16       		.uleb128 0x16
+ 2516 010e 05       		.uleb128 0x5
+ 2517 010f 00       		.byte	0
+ 2518 0110 03       		.uleb128 0x3
+ 2519 0111 0E       		.uleb128 0xe
+ 2520 0112 3A       		.uleb128 0x3a
+ 2521 0113 0B       		.uleb128 0xb
+ 2522 0114 3B       		.uleb128 0x3b
+ 2523 0115 05       		.uleb128 0x5
+ 2524 0116 49       		.uleb128 0x49
+ 2525 0117 13       		.uleb128 0x13
+ 2526 0118 02       		.uleb128 0x2
+ 2527 0119 17       		.uleb128 0x17
+ 2528 011a 00       		.byte	0
+ 2529 011b 00       		.byte	0
+ 2530 011c 17       		.uleb128 0x17
+ 2531 011d 898201   		.uleb128 0x4109
+ 2532 0120 00       		.byte	0
+ 2533 0121 11       		.uleb128 0x11
+ 2534 0122 01       		.uleb128 0x1
+ 2535 0123 31       		.uleb128 0x31
+ 2536 0124 13       		.uleb128 0x13
+ 2537 0125 00       		.byte	0
+ 2538 0126 00       		.byte	0
+ 2539 0127 18       		.uleb128 0x18
+ 2540 0128 898201   		.uleb128 0x4109
+ 2541 012b 01       		.byte	0x1
+ 2542 012c 11       		.uleb128 0x11
+ 2543 012d 01       		.uleb128 0x1
+ 2544 012e 31       		.uleb128 0x31
+ 2545 012f 13       		.uleb128 0x13
+ 2546 0130 00       		.byte	0
+ 2547 0131 00       		.byte	0
+ 2548 0132 19       		.uleb128 0x19
+ 2549 0133 8A8201   		.uleb128 0x410a
+ 2550 0136 00       		.byte	0
+ 2551 0137 02       		.uleb128 0x2
+ 2552 0138 18       		.uleb128 0x18
+ 2553 0139 9142     		.uleb128 0x2111
+ 2554 013b 18       		.uleb128 0x18
+ 2555 013c 00       		.byte	0
+ 2556 013d 00       		.byte	0
+ 2557 013e 1A       		.uleb128 0x1a
+ 2558 013f 2E       		.uleb128 0x2e
+ 2559 0140 01       		.byte	0x1
+ 2560 0141 3F       		.uleb128 0x3f
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 55
+
+
+ 2561 0142 19       		.uleb128 0x19
+ 2562 0143 03       		.uleb128 0x3
+ 2563 0144 0E       		.uleb128 0xe
+ 2564 0145 3A       		.uleb128 0x3a
+ 2565 0146 0B       		.uleb128 0xb
+ 2566 0147 3B       		.uleb128 0x3b
+ 2567 0148 0B       		.uleb128 0xb
+ 2568 0149 27       		.uleb128 0x27
+ 2569 014a 19       		.uleb128 0x19
+ 2570 014b 49       		.uleb128 0x49
+ 2571 014c 13       		.uleb128 0x13
+ 2572 014d 11       		.uleb128 0x11
+ 2573 014e 01       		.uleb128 0x1
+ 2574 014f 12       		.uleb128 0x12
+ 2575 0150 06       		.uleb128 0x6
+ 2576 0151 40       		.uleb128 0x40
+ 2577 0152 18       		.uleb128 0x18
+ 2578 0153 9742     		.uleb128 0x2117
+ 2579 0155 19       		.uleb128 0x19
+ 2580 0156 01       		.uleb128 0x1
+ 2581 0157 13       		.uleb128 0x13
+ 2582 0158 00       		.byte	0
+ 2583 0159 00       		.byte	0
+ 2584 015a 1B       		.uleb128 0x1b
+ 2585 015b 898201   		.uleb128 0x4109
+ 2586 015e 01       		.byte	0x1
+ 2587 015f 11       		.uleb128 0x11
+ 2588 0160 01       		.uleb128 0x1
+ 2589 0161 31       		.uleb128 0x31
+ 2590 0162 13       		.uleb128 0x13
+ 2591 0163 01       		.uleb128 0x1
+ 2592 0164 13       		.uleb128 0x13
+ 2593 0165 00       		.byte	0
+ 2594 0166 00       		.byte	0
+ 2595 0167 1C       		.uleb128 0x1c
+ 2596 0168 05       		.uleb128 0x5
+ 2597 0169 00       		.byte	0
+ 2598 016a 03       		.uleb128 0x3
+ 2599 016b 08       		.uleb128 0x8
+ 2600 016c 3A       		.uleb128 0x3a
+ 2601 016d 0B       		.uleb128 0xb
+ 2602 016e 3B       		.uleb128 0x3b
+ 2603 016f 0B       		.uleb128 0xb
+ 2604 0170 49       		.uleb128 0x49
+ 2605 0171 13       		.uleb128 0x13
+ 2606 0172 02       		.uleb128 0x2
+ 2607 0173 17       		.uleb128 0x17
+ 2608 0174 00       		.byte	0
+ 2609 0175 00       		.byte	0
+ 2610 0176 1D       		.uleb128 0x1d
+ 2611 0177 05       		.uleb128 0x5
+ 2612 0178 00       		.byte	0
+ 2613 0179 03       		.uleb128 0x3
+ 2614 017a 0E       		.uleb128 0xe
+ 2615 017b 3A       		.uleb128 0x3a
+ 2616 017c 0B       		.uleb128 0xb
+ 2617 017d 3B       		.uleb128 0x3b
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 56
+
+
+ 2618 017e 0B       		.uleb128 0xb
+ 2619 017f 49       		.uleb128 0x49
+ 2620 0180 13       		.uleb128 0x13
+ 2621 0181 02       		.uleb128 0x2
+ 2622 0182 17       		.uleb128 0x17
+ 2623 0183 00       		.byte	0
+ 2624 0184 00       		.byte	0
+ 2625 0185 1E       		.uleb128 0x1e
+ 2626 0186 898201   		.uleb128 0x4109
+ 2627 0189 01       		.byte	0x1
+ 2628 018a 11       		.uleb128 0x11
+ 2629 018b 01       		.uleb128 0x1
+ 2630 018c 01       		.uleb128 0x1
+ 2631 018d 13       		.uleb128 0x13
+ 2632 018e 00       		.byte	0
+ 2633 018f 00       		.byte	0
+ 2634 0190 1F       		.uleb128 0x1f
+ 2635 0191 2E       		.uleb128 0x2e
+ 2636 0192 01       		.byte	0x1
+ 2637 0193 3F       		.uleb128 0x3f
+ 2638 0194 19       		.uleb128 0x19
+ 2639 0195 03       		.uleb128 0x3
+ 2640 0196 0E       		.uleb128 0xe
+ 2641 0197 3A       		.uleb128 0x3a
+ 2642 0198 0B       		.uleb128 0xb
+ 2643 0199 3B       		.uleb128 0x3b
+ 2644 019a 0B       		.uleb128 0xb
+ 2645 019b 27       		.uleb128 0x27
+ 2646 019c 19       		.uleb128 0x19
+ 2647 019d 49       		.uleb128 0x49
+ 2648 019e 13       		.uleb128 0x13
+ 2649 019f 11       		.uleb128 0x11
+ 2650 01a0 01       		.uleb128 0x1
+ 2651 01a1 12       		.uleb128 0x12
+ 2652 01a2 06       		.uleb128 0x6
+ 2653 01a3 40       		.uleb128 0x40
+ 2654 01a4 18       		.uleb128 0x18
+ 2655 01a5 9642     		.uleb128 0x2116
+ 2656 01a7 19       		.uleb128 0x19
+ 2657 01a8 01       		.uleb128 0x1
+ 2658 01a9 13       		.uleb128 0x13
+ 2659 01aa 00       		.byte	0
+ 2660 01ab 00       		.byte	0
+ 2661 01ac 20       		.uleb128 0x20
+ 2662 01ad 0B       		.uleb128 0xb
+ 2663 01ae 01       		.byte	0x1
+ 2664 01af 11       		.uleb128 0x11
+ 2665 01b0 01       		.uleb128 0x1
+ 2666 01b1 12       		.uleb128 0x12
+ 2667 01b2 06       		.uleb128 0x6
+ 2668 01b3 01       		.uleb128 0x1
+ 2669 01b4 13       		.uleb128 0x13
+ 2670 01b5 00       		.byte	0
+ 2671 01b6 00       		.byte	0
+ 2672 01b7 21       		.uleb128 0x21
+ 2673 01b8 34       		.uleb128 0x34
+ 2674 01b9 00       		.byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 57
+
+
+ 2675 01ba 03       		.uleb128 0x3
+ 2676 01bb 08       		.uleb128 0x8
+ 2677 01bc 3A       		.uleb128 0x3a
+ 2678 01bd 0B       		.uleb128 0xb
+ 2679 01be 3B       		.uleb128 0x3b
+ 2680 01bf 0B       		.uleb128 0xb
+ 2681 01c0 49       		.uleb128 0x49
+ 2682 01c1 13       		.uleb128 0x13
+ 2683 01c2 02       		.uleb128 0x2
+ 2684 01c3 17       		.uleb128 0x17
+ 2685 01c4 00       		.byte	0
+ 2686 01c5 00       		.byte	0
+ 2687 01c6 22       		.uleb128 0x22
+ 2688 01c7 2E       		.uleb128 0x2e
+ 2689 01c8 01       		.byte	0x1
+ 2690 01c9 3F       		.uleb128 0x3f
+ 2691 01ca 19       		.uleb128 0x19
+ 2692 01cb 03       		.uleb128 0x3
+ 2693 01cc 0E       		.uleb128 0xe
+ 2694 01cd 3A       		.uleb128 0x3a
+ 2695 01ce 0B       		.uleb128 0xb
+ 2696 01cf 3B       		.uleb128 0x3b
+ 2697 01d0 05       		.uleb128 0x5
+ 2698 01d1 27       		.uleb128 0x27
+ 2699 01d2 19       		.uleb128 0x19
+ 2700 01d3 49       		.uleb128 0x49
+ 2701 01d4 13       		.uleb128 0x13
+ 2702 01d5 11       		.uleb128 0x11
+ 2703 01d6 01       		.uleb128 0x1
+ 2704 01d7 12       		.uleb128 0x12
+ 2705 01d8 06       		.uleb128 0x6
+ 2706 01d9 40       		.uleb128 0x40
+ 2707 01da 18       		.uleb128 0x18
+ 2708 01db 9642     		.uleb128 0x2116
+ 2709 01dd 19       		.uleb128 0x19
+ 2710 01de 01       		.uleb128 0x1
+ 2711 01df 13       		.uleb128 0x13
+ 2712 01e0 00       		.byte	0
+ 2713 01e1 00       		.byte	0
+ 2714 01e2 23       		.uleb128 0x23
+ 2715 01e3 05       		.uleb128 0x5
+ 2716 01e4 00       		.byte	0
+ 2717 01e5 03       		.uleb128 0x3
+ 2718 01e6 08       		.uleb128 0x8
+ 2719 01e7 3A       		.uleb128 0x3a
+ 2720 01e8 0B       		.uleb128 0xb
+ 2721 01e9 3B       		.uleb128 0x3b
+ 2722 01ea 05       		.uleb128 0x5
+ 2723 01eb 49       		.uleb128 0x49
+ 2724 01ec 13       		.uleb128 0x13
+ 2725 01ed 02       		.uleb128 0x2
+ 2726 01ee 17       		.uleb128 0x17
+ 2727 01ef 00       		.byte	0
+ 2728 01f0 00       		.byte	0
+ 2729 01f1 24       		.uleb128 0x24
+ 2730 01f2 34       		.uleb128 0x34
+ 2731 01f3 00       		.byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 58
+
+
+ 2732 01f4 03       		.uleb128 0x3
+ 2733 01f5 0E       		.uleb128 0xe
+ 2734 01f6 3A       		.uleb128 0x3a
+ 2735 01f7 0B       		.uleb128 0xb
+ 2736 01f8 3B       		.uleb128 0x3b
+ 2737 01f9 05       		.uleb128 0x5
+ 2738 01fa 49       		.uleb128 0x49
+ 2739 01fb 13       		.uleb128 0x13
+ 2740 01fc 02       		.uleb128 0x2
+ 2741 01fd 18       		.uleb128 0x18
+ 2742 01fe 00       		.byte	0
+ 2743 01ff 00       		.byte	0
+ 2744 0200 25       		.uleb128 0x25
+ 2745 0201 2E       		.uleb128 0x2e
+ 2746 0202 01       		.byte	0x1
+ 2747 0203 3F       		.uleb128 0x3f
+ 2748 0204 19       		.uleb128 0x19
+ 2749 0205 03       		.uleb128 0x3
+ 2750 0206 0E       		.uleb128 0xe
+ 2751 0207 3A       		.uleb128 0x3a
+ 2752 0208 0B       		.uleb128 0xb
+ 2753 0209 3B       		.uleb128 0x3b
+ 2754 020a 05       		.uleb128 0x5
+ 2755 020b 27       		.uleb128 0x27
+ 2756 020c 19       		.uleb128 0x19
+ 2757 020d 49       		.uleb128 0x49
+ 2758 020e 13       		.uleb128 0x13
+ 2759 020f 11       		.uleb128 0x11
+ 2760 0210 01       		.uleb128 0x1
+ 2761 0211 12       		.uleb128 0x12
+ 2762 0212 06       		.uleb128 0x6
+ 2763 0213 40       		.uleb128 0x40
+ 2764 0214 18       		.uleb128 0x18
+ 2765 0215 9742     		.uleb128 0x2117
+ 2766 0217 19       		.uleb128 0x19
+ 2767 0218 01       		.uleb128 0x1
+ 2768 0219 13       		.uleb128 0x13
+ 2769 021a 00       		.byte	0
+ 2770 021b 00       		.byte	0
+ 2771 021c 26       		.uleb128 0x26
+ 2772 021d 34       		.uleb128 0x34
+ 2773 021e 00       		.byte	0
+ 2774 021f 03       		.uleb128 0x3
+ 2775 0220 08       		.uleb128 0x8
+ 2776 0221 3A       		.uleb128 0x3a
+ 2777 0222 0B       		.uleb128 0xb
+ 2778 0223 3B       		.uleb128 0x3b
+ 2779 0224 05       		.uleb128 0x5
+ 2780 0225 49       		.uleb128 0x49
+ 2781 0226 13       		.uleb128 0x13
+ 2782 0227 02       		.uleb128 0x2
+ 2783 0228 17       		.uleb128 0x17
+ 2784 0229 00       		.byte	0
+ 2785 022a 00       		.byte	0
+ 2786 022b 27       		.uleb128 0x27
+ 2787 022c 34       		.uleb128 0x34
+ 2788 022d 00       		.byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 59
+
+
+ 2789 022e 03       		.uleb128 0x3
+ 2790 022f 0E       		.uleb128 0xe
+ 2791 0230 3A       		.uleb128 0x3a
+ 2792 0231 0B       		.uleb128 0xb
+ 2793 0232 3B       		.uleb128 0x3b
+ 2794 0233 0B       		.uleb128 0xb
+ 2795 0234 49       		.uleb128 0x49
+ 2796 0235 13       		.uleb128 0x13
+ 2797 0236 02       		.uleb128 0x2
+ 2798 0237 18       		.uleb128 0x18
+ 2799 0238 00       		.byte	0
+ 2800 0239 00       		.byte	0
+ 2801 023a 28       		.uleb128 0x28
+ 2802 023b 34       		.uleb128 0x34
+ 2803 023c 00       		.byte	0
+ 2804 023d 03       		.uleb128 0x3
+ 2805 023e 0E       		.uleb128 0xe
+ 2806 023f 3A       		.uleb128 0x3a
+ 2807 0240 0B       		.uleb128 0xb
+ 2808 0241 3B       		.uleb128 0x3b
+ 2809 0242 0B       		.uleb128 0xb
+ 2810 0243 49       		.uleb128 0x49
+ 2811 0244 13       		.uleb128 0x13
+ 2812 0245 00       		.byte	0
+ 2813 0246 00       		.byte	0
+ 2814 0247 29       		.uleb128 0x29
+ 2815 0248 34       		.uleb128 0x34
+ 2816 0249 00       		.byte	0
+ 2817 024a 03       		.uleb128 0x3
+ 2818 024b 0E       		.uleb128 0xe
+ 2819 024c 3A       		.uleb128 0x3a
+ 2820 024d 0B       		.uleb128 0xb
+ 2821 024e 3B       		.uleb128 0x3b
+ 2822 024f 05       		.uleb128 0x5
+ 2823 0250 49       		.uleb128 0x49
+ 2824 0251 13       		.uleb128 0x13
+ 2825 0252 3F       		.uleb128 0x3f
+ 2826 0253 19       		.uleb128 0x19
+ 2827 0254 3C       		.uleb128 0x3c
+ 2828 0255 19       		.uleb128 0x19
+ 2829 0256 00       		.byte	0
+ 2830 0257 00       		.byte	0
+ 2831 0258 2A       		.uleb128 0x2a
+ 2832 0259 2E       		.uleb128 0x2e
+ 2833 025a 00       		.byte	0
+ 2834 025b 3F       		.uleb128 0x3f
+ 2835 025c 19       		.uleb128 0x19
+ 2836 025d 3C       		.uleb128 0x3c
+ 2837 025e 19       		.uleb128 0x19
+ 2838 025f 6E       		.uleb128 0x6e
+ 2839 0260 0E       		.uleb128 0xe
+ 2840 0261 03       		.uleb128 0x3
+ 2841 0262 0E       		.uleb128 0xe
+ 2842 0263 3A       		.uleb128 0x3a
+ 2843 0264 0B       		.uleb128 0xb
+ 2844 0265 3B       		.uleb128 0x3b
+ 2845 0266 0B       		.uleb128 0xb
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 60
+
+
+ 2846 0267 00       		.byte	0
+ 2847 0268 00       		.byte	0
+ 2848 0269 2B       		.uleb128 0x2b
+ 2849 026a 2E       		.uleb128 0x2e
+ 2850 026b 00       		.byte	0
+ 2851 026c 3F       		.uleb128 0x3f
+ 2852 026d 19       		.uleb128 0x19
+ 2853 026e 3C       		.uleb128 0x3c
+ 2854 026f 19       		.uleb128 0x19
+ 2855 0270 6E       		.uleb128 0x6e
+ 2856 0271 0E       		.uleb128 0xe
+ 2857 0272 03       		.uleb128 0x3
+ 2858 0273 0E       		.uleb128 0xe
+ 2859 0274 00       		.byte	0
+ 2860 0275 00       		.byte	0
+ 2861 0276 00       		.byte	0
+ 2862              		.section	.debug_loc,"",%progbits
+ 2863              	.Ldebug_loc0:
+ 2864              	.LLST0:
+ 2865 0000 00000000 		.4byte	.LVL0
+ 2866 0004 07000000 		.4byte	.LVL1-1
+ 2867 0008 0100     		.2byte	0x1
+ 2868 000a 50       		.byte	0x50
+ 2869 000b 07000000 		.4byte	.LVL1-1
+ 2870 000f 0A000000 		.4byte	.LVL2
+ 2871 0013 0400     		.2byte	0x4
+ 2872 0015 F3       		.byte	0xf3
+ 2873 0016 01       		.uleb128 0x1
+ 2874 0017 50       		.byte	0x50
+ 2875 0018 9F       		.byte	0x9f
+ 2876 0019 0A000000 		.4byte	.LVL2
+ 2877 001d 0C000000 		.4byte	.LVL3
+ 2878 0021 0100     		.2byte	0x1
+ 2879 0023 50       		.byte	0x50
+ 2880 0024 0C000000 		.4byte	.LVL3
+ 2881 0028 12000000 		.4byte	.LFE73
+ 2882 002c 0400     		.2byte	0x4
+ 2883 002e F3       		.byte	0xf3
+ 2884 002f 01       		.uleb128 0x1
+ 2885 0030 50       		.byte	0x50
+ 2886 0031 9F       		.byte	0x9f
+ 2887 0032 00000000 		.4byte	0
+ 2888 0036 00000000 		.4byte	0
+ 2889              	.LLST1:
+ 2890 003a 00000000 		.4byte	.LVL5
+ 2891 003e 07000000 		.4byte	.LVL6-1
+ 2892 0042 0100     		.2byte	0x1
+ 2893 0044 50       		.byte	0x50
+ 2894 0045 07000000 		.4byte	.LVL6-1
+ 2895 0049 0A000000 		.4byte	.LVL7
+ 2896 004d 0400     		.2byte	0x4
+ 2897 004f F3       		.byte	0xf3
+ 2898 0050 01       		.uleb128 0x1
+ 2899 0051 50       		.byte	0x50
+ 2900 0052 9F       		.byte	0x9f
+ 2901 0053 0A000000 		.4byte	.LVL7
+ 2902 0057 0C000000 		.4byte	.LVL8
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 61
+
+
+ 2903 005b 0100     		.2byte	0x1
+ 2904 005d 50       		.byte	0x50
+ 2905 005e 0C000000 		.4byte	.LVL8
+ 2906 0062 12000000 		.4byte	.LFE74
+ 2907 0066 0400     		.2byte	0x4
+ 2908 0068 F3       		.byte	0xf3
+ 2909 0069 01       		.uleb128 0x1
+ 2910 006a 50       		.byte	0x50
+ 2911 006b 9F       		.byte	0x9f
+ 2912 006c 00000000 		.4byte	0
+ 2913 0070 00000000 		.4byte	0
+ 2914              	.LLST2:
+ 2915 0074 00000000 		.4byte	.LVL10
+ 2916 0078 07000000 		.4byte	.LVL11-1
+ 2917 007c 0100     		.2byte	0x1
+ 2918 007e 50       		.byte	0x50
+ 2919 007f 07000000 		.4byte	.LVL11-1
+ 2920 0083 0A000000 		.4byte	.LVL12
+ 2921 0087 0400     		.2byte	0x4
+ 2922 0089 F3       		.byte	0xf3
+ 2923 008a 01       		.uleb128 0x1
+ 2924 008b 50       		.byte	0x50
+ 2925 008c 9F       		.byte	0x9f
+ 2926 008d 0A000000 		.4byte	.LVL12
+ 2927 0091 0C000000 		.4byte	.LVL13
+ 2928 0095 0100     		.2byte	0x1
+ 2929 0097 50       		.byte	0x50
+ 2930 0098 0C000000 		.4byte	.LVL13
+ 2931 009c 12000000 		.4byte	.LFE75
+ 2932 00a0 0400     		.2byte	0x4
+ 2933 00a2 F3       		.byte	0xf3
+ 2934 00a3 01       		.uleb128 0x1
+ 2935 00a4 50       		.byte	0x50
+ 2936 00a5 9F       		.byte	0x9f
+ 2937 00a6 00000000 		.4byte	0
+ 2938 00aa 00000000 		.4byte	0
+ 2939              	.LLST3:
+ 2940 00ae 00000000 		.4byte	.LVL18
+ 2941 00b2 0F000000 		.4byte	.LVL20-1
+ 2942 00b6 0100     		.2byte	0x1
+ 2943 00b8 50       		.byte	0x50
+ 2944 00b9 0F000000 		.4byte	.LVL20-1
+ 2945 00bd 52000000 		.4byte	.LVL21
+ 2946 00c1 0100     		.2byte	0x1
+ 2947 00c3 54       		.byte	0x54
+ 2948 00c4 52000000 		.4byte	.LVL21
+ 2949 00c8 54000000 		.4byte	.LVL22
+ 2950 00cc 0100     		.2byte	0x1
+ 2951 00ce 50       		.byte	0x50
+ 2952 00cf 54000000 		.4byte	.LVL22
+ 2953 00d3 64000000 		.4byte	.LFE66
+ 2954 00d7 0400     		.2byte	0x4
+ 2955 00d9 F3       		.byte	0xf3
+ 2956 00da 01       		.uleb128 0x1
+ 2957 00db 50       		.byte	0x50
+ 2958 00dc 9F       		.byte	0x9f
+ 2959 00dd 00000000 		.4byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 62
+
+
+ 2960 00e1 00000000 		.4byte	0
+ 2961              	.LLST4:
+ 2962 00e5 00000000 		.4byte	.LVL18
+ 2963 00e9 0C000000 		.4byte	.LVL19
+ 2964 00ed 0100     		.2byte	0x1
+ 2965 00ef 51       		.byte	0x51
+ 2966 00f0 0C000000 		.4byte	.LVL19
+ 2967 00f4 52000000 		.4byte	.LVL21
+ 2968 00f8 0400     		.2byte	0x4
+ 2969 00fa F3       		.byte	0xf3
+ 2970 00fb 01       		.uleb128 0x1
+ 2971 00fc 51       		.byte	0x51
+ 2972 00fd 9F       		.byte	0x9f
+ 2973 00fe 52000000 		.4byte	.LVL21
+ 2974 0102 64000000 		.4byte	.LFE66
+ 2975 0106 0100     		.2byte	0x1
+ 2976 0108 51       		.byte	0x51
+ 2977 0109 00000000 		.4byte	0
+ 2978 010d 00000000 		.4byte	0
+ 2979              	.LLST5:
+ 2980 0111 00000000 		.4byte	.LVL18
+ 2981 0115 0F000000 		.4byte	.LVL20-1
+ 2982 0119 0100     		.2byte	0x1
+ 2983 011b 52       		.byte	0x52
+ 2984 011c 0F000000 		.4byte	.LVL20-1
+ 2985 0120 52000000 		.4byte	.LVL21
+ 2986 0124 0400     		.2byte	0x4
+ 2987 0126 F3       		.byte	0xf3
+ 2988 0127 01       		.uleb128 0x1
+ 2989 0128 52       		.byte	0x52
+ 2990 0129 9F       		.byte	0x9f
+ 2991 012a 52000000 		.4byte	.LVL21
+ 2992 012e 64000000 		.4byte	.LFE66
+ 2993 0132 0100     		.2byte	0x1
+ 2994 0134 52       		.byte	0x52
+ 2995 0135 00000000 		.4byte	0
+ 2996 0139 00000000 		.4byte	0
+ 2997              	.LLST6:
+ 2998 013d 00000000 		.4byte	.LVL18
+ 2999 0141 0F000000 		.4byte	.LVL20-1
+ 3000 0145 0100     		.2byte	0x1
+ 3001 0147 53       		.byte	0x53
+ 3002 0148 0F000000 		.4byte	.LVL20-1
+ 3003 014c 52000000 		.4byte	.LVL21
+ 3004 0150 0400     		.2byte	0x4
+ 3005 0152 F3       		.byte	0xf3
+ 3006 0153 01       		.uleb128 0x1
+ 3007 0154 53       		.byte	0x53
+ 3008 0155 9F       		.byte	0x9f
+ 3009 0156 52000000 		.4byte	.LVL21
+ 3010 015a 64000000 		.4byte	.LFE66
+ 3011 015e 0100     		.2byte	0x1
+ 3012 0160 53       		.byte	0x53
+ 3013 0161 00000000 		.4byte	0
+ 3014 0165 00000000 		.4byte	0
+ 3015              	.LLST7:
+ 3016 0169 00000000 		.4byte	.LVL23
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 63
+
+
+ 3017 016d 29000000 		.4byte	.LVL24-1
+ 3018 0171 0100     		.2byte	0x1
+ 3019 0173 50       		.byte	0x50
+ 3020 0174 29000000 		.4byte	.LVL24-1
+ 3021 0178 5C000000 		.4byte	.LVL26
+ 3022 017c 0100     		.2byte	0x1
+ 3023 017e 54       		.byte	0x54
+ 3024 017f 5C000000 		.4byte	.LVL26
+ 3025 0183 5E000000 		.4byte	.LVL27
+ 3026 0187 0100     		.2byte	0x1
+ 3027 0189 50       		.byte	0x50
+ 3028 018a 5E000000 		.4byte	.LVL27
+ 3029 018e 74000000 		.4byte	.LFE67
+ 3030 0192 0400     		.2byte	0x4
+ 3031 0194 F3       		.byte	0xf3
+ 3032 0195 01       		.uleb128 0x1
+ 3033 0196 50       		.byte	0x50
+ 3034 0197 9F       		.byte	0x9f
+ 3035 0198 00000000 		.4byte	0
+ 3036 019c 00000000 		.4byte	0
+ 3037              	.LLST8:
+ 3038 01a0 00000000 		.4byte	.LVL29
+ 3039 01a4 1A000000 		.4byte	.LVL30
+ 3040 01a8 0100     		.2byte	0x1
+ 3041 01aa 50       		.byte	0x50
+ 3042 01ab 1A000000 		.4byte	.LVL30
+ 3043 01af 34000000 		.4byte	.LVL33
+ 3044 01b3 0100     		.2byte	0x1
+ 3045 01b5 54       		.byte	0x54
+ 3046 01b6 34000000 		.4byte	.LVL33
+ 3047 01ba 4A000000 		.4byte	.LVL34
+ 3048 01be 0100     		.2byte	0x1
+ 3049 01c0 50       		.byte	0x50
+ 3050 01c1 4A000000 		.4byte	.LVL34
+ 3051 01c5 70000000 		.4byte	.LVL36
+ 3052 01c9 0100     		.2byte	0x1
+ 3053 01cb 54       		.byte	0x54
+ 3054 01cc 70000000 		.4byte	.LVL36
+ 3055 01d0 74000000 		.4byte	.LVL37
+ 3056 01d4 0300     		.2byte	0x3
+ 3057 01d6 74       		.byte	0x74
+ 3058 01d7 70       		.sleb128 -16
+ 3059 01d8 9F       		.byte	0x9f
+ 3060 01d9 74000000 		.4byte	.LVL37
+ 3061 01dd 78000000 		.4byte	.LVL38
+ 3062 01e1 0300     		.2byte	0x3
+ 3063 01e3 74       		.byte	0x74
+ 3064 01e4 60       		.sleb128 -32
+ 3065 01e5 9F       		.byte	0x9f
+ 3066 01e6 78000000 		.4byte	.LVL38
+ 3067 01ea 8A000000 		.4byte	.LVL39
+ 3068 01ee 0300     		.2byte	0x3
+ 3069 01f0 74       		.byte	0x74
+ 3070 01f1 50       		.sleb128 -48
+ 3071 01f2 9F       		.byte	0x9f
+ 3072 01f3 8A000000 		.4byte	.LVL39
+ 3073 01f7 8C000000 		.4byte	.LVL40
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 64
+
+
+ 3074 01fb 0100     		.2byte	0x1
+ 3075 01fd 50       		.byte	0x50
+ 3076 01fe 8C000000 		.4byte	.LVL40
+ 3077 0202 94000000 		.4byte	.LVL42
+ 3078 0206 0100     		.2byte	0x1
+ 3079 0208 54       		.byte	0x54
+ 3080 0209 94000000 		.4byte	.LVL42
+ 3081 020d A4000000 		.4byte	.LFE68
+ 3082 0211 0400     		.2byte	0x4
+ 3083 0213 F3       		.byte	0xf3
+ 3084 0214 01       		.uleb128 0x1
+ 3085 0215 50       		.byte	0x50
+ 3086 0216 9F       		.byte	0x9f
+ 3087 0217 00000000 		.4byte	0
+ 3088 021b 00000000 		.4byte	0
+ 3089              	.LLST9:
+ 3090 021f 30000000 		.4byte	.LVL32
+ 3091 0223 34000000 		.4byte	.LVL33
+ 3092 0227 0100     		.2byte	0x1
+ 3093 0229 50       		.byte	0x50
+ 3094 022a 00000000 		.4byte	0
+ 3095 022e 00000000 		.4byte	0
+ 3096              	.LLST10:
+ 3097 0232 00000000 		.4byte	.LVL43
+ 3098 0236 37000000 		.4byte	.LVL44-1
+ 3099 023a 0100     		.2byte	0x1
+ 3100 023c 50       		.byte	0x50
+ 3101 023d 37000000 		.4byte	.LVL44-1
+ 3102 0241 68000000 		.4byte	.LVL46
+ 3103 0245 0100     		.2byte	0x1
+ 3104 0247 54       		.byte	0x54
+ 3105 0248 68000000 		.4byte	.LVL46
+ 3106 024c 6A000000 		.4byte	.LVL47
+ 3107 0250 0100     		.2byte	0x1
+ 3108 0252 50       		.byte	0x50
+ 3109 0253 6A000000 		.4byte	.LVL47
+ 3110 0257 80000000 		.4byte	.LFE69
+ 3111 025b 0400     		.2byte	0x4
+ 3112 025d F3       		.byte	0xf3
+ 3113 025e 01       		.uleb128 0x1
+ 3114 025f 50       		.byte	0x50
+ 3115 0260 9F       		.byte	0x9f
+ 3116 0261 00000000 		.4byte	0
+ 3117 0265 00000000 		.4byte	0
+ 3118              	.LLST11:
+ 3119 0269 00000000 		.4byte	.LVL49
+ 3120 026d 2B000000 		.4byte	.LVL50-1
+ 3121 0271 0100     		.2byte	0x1
+ 3122 0273 50       		.byte	0x50
+ 3123 0274 2B000000 		.4byte	.LVL50-1
+ 3124 0278 4E000000 		.4byte	.LVL52
+ 3125 027c 0100     		.2byte	0x1
+ 3126 027e 54       		.byte	0x54
+ 3127 027f 4E000000 		.4byte	.LVL52
+ 3128 0283 50000000 		.4byte	.LVL53
+ 3129 0287 0100     		.2byte	0x1
+ 3130 0289 50       		.byte	0x50
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 65
+
+
+ 3131 028a 50000000 		.4byte	.LVL53
+ 3132 028e 60000000 		.4byte	.LFE70
+ 3133 0292 0400     		.2byte	0x4
+ 3134 0294 F3       		.byte	0xf3
+ 3135 0295 01       		.uleb128 0x1
+ 3136 0296 50       		.byte	0x50
+ 3137 0297 9F       		.byte	0x9f
+ 3138 0298 00000000 		.4byte	0
+ 3139 029c 00000000 		.4byte	0
+ 3140              	.LLST12:
+ 3141 02a0 00000000 		.4byte	.LVL55
+ 3142 02a4 0C000000 		.4byte	.LVL56
+ 3143 02a8 0100     		.2byte	0x1
+ 3144 02aa 50       		.byte	0x50
+ 3145 02ab 0C000000 		.4byte	.LVL56
+ 3146 02af 60000000 		.4byte	.LVL67
+ 3147 02b3 0100     		.2byte	0x1
+ 3148 02b5 54       		.byte	0x54
+ 3149 02b6 60000000 		.4byte	.LVL67
+ 3150 02ba 8E000000 		.4byte	.LVL74
+ 3151 02be 0400     		.2byte	0x4
+ 3152 02c0 F3       		.byte	0xf3
+ 3153 02c1 01       		.uleb128 0x1
+ 3154 02c2 50       		.byte	0x50
+ 3155 02c3 9F       		.byte	0x9f
+ 3156 02c4 8E000000 		.4byte	.LVL74
+ 3157 02c8 B6000000 		.4byte	.LVL78
+ 3158 02cc 0100     		.2byte	0x1
+ 3159 02ce 54       		.byte	0x54
+ 3160 02cf B6000000 		.4byte	.LVL78
+ 3161 02d3 E4000000 		.4byte	.LFE71
+ 3162 02d7 0400     		.2byte	0x4
+ 3163 02d9 F3       		.byte	0xf3
+ 3164 02da 01       		.uleb128 0x1
+ 3165 02db 50       		.byte	0x50
+ 3166 02dc 9F       		.byte	0x9f
+ 3167 02dd 00000000 		.4byte	0
+ 3168 02e1 00000000 		.4byte	0
+ 3169              	.LLST13:
+ 3170 02e5 08000000 		.4byte	.LVL80
+ 3171 02e9 0C000000 		.4byte	.LVL81
+ 3172 02ed 0200     		.2byte	0x2
+ 3173 02ef 30       		.byte	0x30
+ 3174 02f0 9F       		.byte	0x9f
+ 3175 02f1 0C000000 		.4byte	.LVL81
+ 3176 02f5 2C000000 		.4byte	.LVL84
+ 3177 02f9 0100     		.2byte	0x1
+ 3178 02fb 54       		.byte	0x54
+ 3179 02fc 00000000 		.4byte	0
+ 3180 0300 00000000 		.4byte	0
+ 3181              		.section	.debug_aranges,"",%progbits
+ 3182 0000 74000000 		.4byte	0x74
+ 3183 0004 0200     		.2byte	0x2
+ 3184 0006 00000000 		.4byte	.Ldebug_info0
+ 3185 000a 04       		.byte	0x4
+ 3186 000b 00       		.byte	0
+ 3187 000c 0000     		.2byte	0
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 66
+
+
+ 3188 000e 0000     		.2byte	0
+ 3189 0010 00000000 		.4byte	.LFB64
+ 3190 0014 10000000 		.4byte	.LFE64-.LFB64
+ 3191 0018 00000000 		.4byte	.LFB73
+ 3192 001c 12000000 		.4byte	.LFE73-.LFB73
+ 3193 0020 00000000 		.4byte	.LFB74
+ 3194 0024 12000000 		.4byte	.LFE74-.LFB74
+ 3195 0028 00000000 		.4byte	.LFB75
+ 3196 002c 12000000 		.4byte	.LFE75-.LFB75
+ 3197 0030 00000000 		.4byte	.LFB65
+ 3198 0034 3C000000 		.4byte	.LFE65-.LFB65
+ 3199 0038 00000000 		.4byte	.LFB66
+ 3200 003c 64000000 		.4byte	.LFE66-.LFB66
+ 3201 0040 00000000 		.4byte	.LFB67
+ 3202 0044 74000000 		.4byte	.LFE67-.LFB67
+ 3203 0048 00000000 		.4byte	.LFB68
+ 3204 004c A4000000 		.4byte	.LFE68-.LFB68
+ 3205 0050 00000000 		.4byte	.LFB69
+ 3206 0054 80000000 		.4byte	.LFE69-.LFB69
+ 3207 0058 00000000 		.4byte	.LFB70
+ 3208 005c 60000000 		.4byte	.LFE70-.LFB70
+ 3209 0060 00000000 		.4byte	.LFB71
+ 3210 0064 E4000000 		.4byte	.LFE71-.LFB71
+ 3211 0068 00000000 		.4byte	.LFB72
+ 3212 006c 38000000 		.4byte	.LFE72-.LFB72
+ 3213 0070 00000000 		.4byte	0
+ 3214 0074 00000000 		.4byte	0
+ 3215              		.section	.debug_ranges,"",%progbits
+ 3216              	.Ldebug_ranges0:
+ 3217 0000 00000000 		.4byte	.LFB64
+ 3218 0004 10000000 		.4byte	.LFE64
+ 3219 0008 00000000 		.4byte	.LFB73
+ 3220 000c 12000000 		.4byte	.LFE73
+ 3221 0010 00000000 		.4byte	.LFB74
+ 3222 0014 12000000 		.4byte	.LFE74
+ 3223 0018 00000000 		.4byte	.LFB75
+ 3224 001c 12000000 		.4byte	.LFE75
+ 3225 0020 00000000 		.4byte	.LFB65
+ 3226 0024 3C000000 		.4byte	.LFE65
+ 3227 0028 00000000 		.4byte	.LFB66
+ 3228 002c 64000000 		.4byte	.LFE66
+ 3229 0030 00000000 		.4byte	.LFB67
+ 3230 0034 74000000 		.4byte	.LFE67
+ 3231 0038 00000000 		.4byte	.LFB68
+ 3232 003c A4000000 		.4byte	.LFE68
+ 3233 0040 00000000 		.4byte	.LFB69
+ 3234 0044 80000000 		.4byte	.LFE69
+ 3235 0048 00000000 		.4byte	.LFB70
+ 3236 004c 60000000 		.4byte	.LFE70
+ 3237 0050 00000000 		.4byte	.LFB71
+ 3238 0054 E4000000 		.4byte	.LFE71
+ 3239 0058 00000000 		.4byte	.LFB72
+ 3240 005c 38000000 		.4byte	.LFE72
+ 3241 0060 00000000 		.4byte	0
+ 3242 0064 00000000 		.4byte	0
+ 3243              		.section	.debug_line,"",%progbits
+ 3244              	.Ldebug_line0:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 67
+
+
+ 3245 0000 AF030000 		.section	.debug_str,"MS",%progbits,1
+ 3245      02002D02 
+ 3245      00000201 
+ 3245      FB0E0D00 
+ 3245      01010101 
+ 3246              	.LASF79:
+ 3247 0000 54696D69 		.ascii	"TimingAnalyzer_RedLED\000"
+ 3247      6E67416E 
+ 3247      616C797A 
+ 3247      65725F52 
+ 3247      65644C45 
+ 3248              	.LASF86:
+ 3249 0016 54696D69 		.ascii	"TimingAnalyzer_Stop\000"
+ 3249      6E67416E 
+ 3249      616C797A 
+ 3249      65725F53 
+ 3249      746F7000 
+ 3250              	.LASF0:
+ 3251 002a 52435F53 		.ascii	"RC_SUCCESS\000"
+ 3251      55434345 
+ 3251      535300
+ 3252              	.LASF21:
+ 3253 0035 646F7562 		.ascii	"double\000"
+ 3253      6C6500
+ 3254              	.LASF66:
+ 3255 003c 54696D65 		.ascii	"TimerState_t\000"
+ 3255      72537461 
+ 3255      74655F74 
+ 3255      00
+ 3256              	.LASF105:
+ 3257 0049 43795379 		.ascii	"CySysTickEnable\000"
+ 3257      73546963 
+ 3257      6B456E61 
+ 3257      626C6500 
+ 3258              	.LASF74:
+ 3259 0059 746F7461 		.ascii	"totalTimeDWT\000"
+ 3259      6C54696D 
+ 3259      65445754 
+ 3259      00
+ 3260              	.LASF52:
+ 3261 0066 44454D43 		.ascii	"DEMCR\000"
+ 3261      5200
+ 3262              	.LASF69:
+ 3263 006c 73746174 		.ascii	"state\000"
+ 3263      6500
+ 3264              	.LASF60:
+ 3265 0072 50696E43 		.ascii	"PinControl_t\000"
+ 3265      6F6E7472 
+ 3265      6F6C5F74 
+ 3265      00
+ 3266              	.LASF8:
+ 3267 007f 73686F72 		.ascii	"short int\000"
+ 3267      7420696E 
+ 3267      7400
+ 3268              	.LASF91:
+ 3269 0089 54696D69 		.ascii	"TimingAnalyzer_PrintAll\000"
+ 3269      6E67416E 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 68
+
+
+ 3269      616C797A 
+ 3269      65725F50 
+ 3269      72696E74 
+ 3270              	.LASF24:
+ 3271 00a1 73697A65 		.ascii	"sizetype\000"
+ 3271      74797065 
+ 3271      00
+ 3272              	.LASF108:
+ 3273 00aa 7374726C 		.ascii	"strlen\000"
+ 3273      656E00
+ 3274              	.LASF57:
+ 3275 00b1 4D4F4445 		.ascii	"MODE_SYSTICK_PIN\000"
+ 3275      5F535953 
+ 3275      5449434B 
+ 3275      5F50494E 
+ 3275      00
+ 3276              	.LASF95:
+ 3277 00c2 7265644C 		.ascii	"redLedControl\000"
+ 3277      6564436F 
+ 3277      6E74726F 
+ 3277      6C00
+ 3278              	.LASF32:
+ 3279 00d0 50435352 		.ascii	"PCSR\000"
+ 3279      00
+ 3280              	.LASF31:
+ 3281 00d5 464F4C44 		.ascii	"FOLDCNT\000"
+ 3281      434E5400 
+ 3282              	.LASF78:
+ 3283 00dd 54696D69 		.ascii	"TimingAnalyzer_t\000"
+ 3283      6E67416E 
+ 3283      616C797A 
+ 3283      65725F74 
+ 3283      00
+ 3284              	.LASF12:
+ 3285 00ee 5F5F7569 		.ascii	"__uint32_t\000"
+ 3285      6E743332 
+ 3285      5F7400
+ 3286              	.LASF68:
+ 3287 00f9 6D6F6465 		.ascii	"mode\000"
+ 3287      00
+ 3288              	.LASF99:
+ 3289 00fe 47726565 		.ascii	"Green_LED_Write\000"
+ 3289      6E5F4C45 
+ 3289      445F5772 
+ 3289      69746500 
+ 3290              	.LASF84:
+ 3291 010e 54696D69 		.ascii	"TimingAnalyzer_Create\000"
+ 3291      6E67416E 
+ 3291      616C797A 
+ 3291      65725F43 
+ 3291      72656174 
+ 3292              	.LASF106:
+ 3293 0124 55415254 		.ascii	"UART_LOG_PutString\000"
+ 3293      5F4C4F47 
+ 3293      5F507574 
+ 3293      53747269 
+ 3293      6E6700
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 69
+
+
+ 3294              	.LASF25:
+ 3295 0137 4354524C 		.ascii	"CTRL\000"
+ 3295      00
+ 3296              	.LASF103:
+ 3297 013c 43795379 		.ascii	"CySysTickSetReload\000"
+ 3297      73546963 
+ 3297      6B536574 
+ 3297      52656C6F 
+ 3297      616400
+ 3298              	.LASF81:
+ 3299 014f 76616C75 		.ascii	"value\000"
+ 3299      6500
+ 3300              	.LASF44:
+ 3301 0155 52455345 		.ascii	"RESERVED2\000"
+ 3301      52564544 
+ 3301      3200
+ 3302              	.LASF53:
+ 3303 015f 436F7265 		.ascii	"CoreDebug_Type\000"
+ 3303      44656275 
+ 3303      675F5479 
+ 3303      706500
+ 3304              	.LASF17:
+ 3305 016e 75696E74 		.ascii	"uint8_t\000"
+ 3305      385F7400 
+ 3306              	.LASF6:
+ 3307 0176 52435F74 		.ascii	"RC_t\000"
+ 3307      00
+ 3308              	.LASF50:
+ 3309 017b 44435253 		.ascii	"DCRSR\000"
+ 3309      5200
+ 3310              	.LASF56:
+ 3311 0181 4D4F4445 		.ascii	"MODE_SYSTICK\000"
+ 3311      5F535953 
+ 3311      5449434B 
+ 3311      00
+ 3312              	.LASF2:
+ 3313 018e 52435F45 		.ascii	"RC_ERROR_BADPARAM\000"
+ 3313      52524F52 
+ 3313      5F424144 
+ 3313      50415241 
+ 3313      4D00
+ 3314              	.LASF51:
+ 3315 01a0 44435244 		.ascii	"DCRDR\000"
+ 3315      5200
+ 3316              	.LASF20:
+ 3317 01a6 666C6F61 		.ascii	"float\000"
+ 3317      7400
+ 3318              	.LASF82:
+ 3319 01ac 54696D69 		.ascii	"TimingAnalyzer_YellowLED\000"
+ 3319      6E67416E 
+ 3319      616C797A 
+ 3319      65725F59 
+ 3319      656C6C6F 
+ 3320              	.LASF14:
+ 3321 01c5 6C6F6E67 		.ascii	"long long int\000"
+ 3321      206C6F6E 
+ 3321      6720696E 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 70
+
+
+ 3321      7400
+ 3322              	.LASF42:
+ 3323 01d3 4D41534B 		.ascii	"MASK2\000"
+ 3323      3200
+ 3324              	.LASF26:
+ 3325 01d9 43594343 		.ascii	"CYCCNT\000"
+ 3325      4E5400
+ 3326              	.LASF54:
+ 3327 01e0 4D4F4445 		.ascii	"MODE_DWT_COUNTER\000"
+ 3327      5F445754 
+ 3327      5F434F55 
+ 3327      4E544552 
+ 3327      00
+ 3328              	.LASF115:
+ 3329 01f1 6D656D73 		.ascii	"memset\000"
+ 3329      657400
+ 3330              	.LASF64:
+ 3331 01f8 53544154 		.ascii	"STATE_PAUSE\000"
+ 3331      455F5041 
+ 3331      55534500 
+ 3332              	.LASF11:
+ 3333 0204 6C6F6E67 		.ascii	"long int\000"
+ 3333      20696E74 
+ 3333      00
+ 3334              	.LASF43:
+ 3335 020d 46554E43 		.ascii	"FUNCTION2\000"
+ 3335      54494F4E 
+ 3335      3200
+ 3336              	.LASF72:
+ 3337 0217 70696E43 		.ascii	"pinControl\000"
+ 3337      6F6E7472 
+ 3337      6F6C00
+ 3338              	.LASF55:
+ 3339 0222 4D4F4445 		.ascii	"MODE_DWT_COUNTER_PIN\000"
+ 3339      5F445754 
+ 3339      5F434F55 
+ 3339      4E544552 
+ 3339      5F50494E 
+ 3340              	.LASF102:
+ 3341 0237 43795379 		.ascii	"CySysTickSetCallback\000"
+ 3341      73546963 
+ 3341      6B536574 
+ 3341      43616C6C 
+ 3341      6261636B 
+ 3342              	.LASF112:
+ 3343 024c 443A5C70 		.ascii	"D:\\psoc-workspace\\Lab Assignments\\Workspace01\\A"
+ 3343      736F632D 
+ 3343      776F726B 
+ 3343      73706163 
+ 3343      655C4C61 
+ 3344 027b 73736967 		.ascii	"ssignment01Design.cydsn\000"
+ 3344      6E6D656E 
+ 3344      74303144 
+ 3344      65736967 
+ 3344      6E2E6379 
+ 3345              	.LASF76:
+ 3346 0293 69735661 		.ascii	"isValid\000"
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 71
+
+
+ 3346      6C696400 
+ 3347              	.LASF62:
+ 3348 029b 53544154 		.ascii	"STATE_START\000"
+ 3348      455F5354 
+ 3348      41525400 
+ 3349              	.LASF67:
+ 3350 02a7 6E616D65 		.ascii	"name\000"
+ 3350      00
+ 3351              	.LASF35:
+ 3352 02ac 46554E43 		.ascii	"FUNCTION0\000"
+ 3352      54494F4E 
+ 3352      3000
+ 3353              	.LASF39:
+ 3354 02b6 46554E43 		.ascii	"FUNCTION1\000"
+ 3354      54494F4E 
+ 3354      3100
+ 3355              	.LASF47:
+ 3356 02c0 46554E43 		.ascii	"FUNCTION3\000"
+ 3356      54494F4E 
+ 3356      3300
+ 3357              	.LASF23:
+ 3358 02ca 6C6F6E67 		.ascii	"long double\000"
+ 3358      20646F75 
+ 3358      626C6500 
+ 3359              	.LASF93:
+ 3360 02d6 73797374 		.ascii	"systickCounter\000"
+ 3360      69636B43 
+ 3360      6F756E74 
+ 3360      657200
+ 3361              	.LASF4:
+ 3362 02e5 756E7369 		.ascii	"unsigned char\000"
+ 3362      676E6564 
+ 3362      20636861 
+ 3362      7200
+ 3363              	.LASF63:
+ 3364 02f3 53544154 		.ascii	"STATE_STOP\000"
+ 3364      455F5354 
+ 3364      4F5000
+ 3365              	.LASF34:
+ 3366 02fe 4D41534B 		.ascii	"MASK0\000"
+ 3366      3000
+ 3367              	.LASF38:
+ 3368 0304 4D41534B 		.ascii	"MASK1\000"
+ 3368      3100
+ 3369              	.LASF3:
+ 3370 030a 52435F45 		.ascii	"RC_ERROR_BADMEMORY\000"
+ 3370      52524F52 
+ 3370      5F424144 
+ 3370      4D454D4F 
+ 3370      525900
+ 3371              	.LASF46:
+ 3372 031d 4D41534B 		.ascii	"MASK3\000"
+ 3372      3300
+ 3373              	.LASF58:
+ 3374 0323 4D4F4445 		.ascii	"MODE_PIN_ONLY\000"
+ 3374      5F50494E 
+ 3374      5F4F4E4C 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 72
+
+
+ 3374      5900
+ 3375              	.LASF5:
+ 3376 0331 7369676E 		.ascii	"signed char\000"
+ 3376      65642063 
+ 3376      68617200 
+ 3377              	.LASF18:
+ 3378 033d 696E7433 		.ascii	"int32_t\000"
+ 3378      325F7400 
+ 3379              	.LASF15:
+ 3380 0345 6C6F6E67 		.ascii	"long long unsigned int\000"
+ 3380      206C6F6E 
+ 3380      6720756E 
+ 3380      7369676E 
+ 3380      65642069 
+ 3381              	.LASF65:
+ 3382 035c 53544154 		.ascii	"STATE_RESUME\000"
+ 3382      455F5245 
+ 3382      53554D45 
+ 3382      00
+ 3383              	.LASF19:
+ 3384 0369 75696E74 		.ascii	"uint32_t\000"
+ 3384      33325F74 
+ 3384      00
+ 3385              	.LASF83:
+ 3386 0372 54696D69 		.ascii	"TimingAnalyzer_Init\000"
+ 3386      6E67416E 
+ 3386      616C797A 
+ 3386      65725F49 
+ 3386      6E697400 
+ 3387              	.LASF92:
+ 3388 0386 616E616C 		.ascii	"analyzers\000"
+ 3388      797A6572 
+ 3388      7300
+ 3389              	.LASF16:
+ 3390 0390 756E7369 		.ascii	"unsigned int\000"
+ 3390      676E6564 
+ 3390      20696E74 
+ 3390      00
+ 3391              	.LASF48:
+ 3392 039d 4457545F 		.ascii	"DWT_Type\000"
+ 3392      54797065 
+ 3392      00
+ 3393              	.LASF7:
+ 3394 03a6 5F5F7569 		.ascii	"__uint8_t\000"
+ 3394      6E74385F 
+ 3394      7400
+ 3395              	.LASF109:
+ 3396 03b0 73707269 		.ascii	"sprintf\000"
+ 3396      6E746600 
+ 3397              	.LASF49:
+ 3398 03b8 44484353 		.ascii	"DHCSR\000"
+ 3398      5200
+ 3399              	.LASF9:
+ 3400 03be 73686F72 		.ascii	"short unsigned int\000"
+ 3400      7420756E 
+ 3400      7369676E 
+ 3400      65642069 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 73
+
+
+ 3400      6E7400
+ 3401              	.LASF110:
+ 3402 03d1 474E5520 		.ascii	"GNU C11 5.4.1 20160609 (release) [ARM/embedded-5-br"
+ 3402      43313120 
+ 3402      352E342E 
+ 3402      31203230 
+ 3402      31363036 
+ 3403 0404 616E6368 		.ascii	"anch revision 237715] -mcpu=cortex-m3 -mthumb -g -O"
+ 3403      20726576 
+ 3403      6973696F 
+ 3403      6E203233 
+ 3403      37373135 
+ 3404 0437 67202D66 		.ascii	"g -ffunction-sections -ffat-lto-objects\000"
+ 3404      66756E63 
+ 3404      74696F6E 
+ 3404      2D736563 
+ 3404      74696F6E 
+ 3405              	.LASF94:
+ 3406 045f 616E616C 		.ascii	"analyzerCount\000"
+ 3406      797A6572 
+ 3406      436F756E 
+ 3406      7400
+ 3407              	.LASF22:
+ 3408 046d 63686172 		.ascii	"char\000"
+ 3408      00
+ 3409              	.LASF80:
+ 3410 0472 54696D69 		.ascii	"TimingAnalyzer_GreenLED\000"
+ 3410      6E67416E 
+ 3410      616C797A 
+ 3410      65725F47 
+ 3410      7265656E 
+ 3411              	.LASF33:
+ 3412 048a 434F4D50 		.ascii	"COMP0\000"
+ 3412      3000
+ 3413              	.LASF37:
+ 3414 0490 434F4D50 		.ascii	"COMP1\000"
+ 3414      3100
+ 3415              	.LASF41:
+ 3416 0496 434F4D50 		.ascii	"COMP2\000"
+ 3416      3200
+ 3417              	.LASF45:
+ 3418 049c 434F4D50 		.ascii	"COMP3\000"
+ 3418      3300
+ 3419              	.LASF104:
+ 3420 04a2 73747263 		.ascii	"strcpy\000"
+ 3420      707900
+ 3421              	.LASF77:
+ 3422 04a9 5F426F6F 		.ascii	"_Bool\000"
+ 3422      6C00
+ 3423              	.LASF73:
+ 3424 04af 746F7461 		.ascii	"totalTime\000"
+ 3424      6C54696D 
+ 3424      6500
+ 3425              	.LASF107:
+ 3426 04b9 43795379 		.ascii	"CySysTickStop\000"
+ 3426      73546963 
+ 3426      6B53746F 
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 74
+
+
+ 3426      7000
+ 3427              	.LASF90:
+ 3428 04c7 62756666 		.ascii	"buffer\000"
+ 3428      657200
+ 3429              	.LASF36:
+ 3430 04ce 52455345 		.ascii	"RESERVED0\000"
+ 3430      52564544 
+ 3430      3000
+ 3431              	.LASF40:
+ 3432 04d8 52455345 		.ascii	"RESERVED1\000"
+ 3432      52564544 
+ 3432      3100
+ 3433              	.LASF27:
+ 3434 04e2 43504943 		.ascii	"CPICNT\000"
+ 3434      4E5400
+ 3435              	.LASF71:
+ 3436 04e9 656E6454 		.ascii	"endTime\000"
+ 3436      696D6500 
+ 3437              	.LASF13:
+ 3438 04f1 6C6F6E67 		.ascii	"long unsigned int\000"
+ 3438      20756E73 
+ 3438      69676E65 
+ 3438      6420696E 
+ 3438      7400
+ 3439              	.LASF70:
+ 3440 0503 73746172 		.ascii	"startTime\000"
+ 3440      7454696D 
+ 3440      6500
+ 3441              	.LASF97:
+ 3442 050d 79656C6C 		.ascii	"yellowLedControl\000"
+ 3442      6F774C65 
+ 3442      64436F6E 
+ 3442      74726F6C 
+ 3442      00
+ 3443              	.LASF89:
+ 3444 051e 54696D69 		.ascii	"TimingAnalyzer_PrintSingle\000"
+ 3444      6E67416E 
+ 3444      616C797A 
+ 3444      65725F50 
+ 3444      72696E74 
+ 3445              	.LASF61:
+ 3446 0539 53544154 		.ascii	"STATE_CONFIGURED\000"
+ 3446      455F434F 
+ 3446      4E464947 
+ 3446      55524544 
+ 3446      00
+ 3447              	.LASF113:
+ 3448 054a 53797354 		.ascii	"SysTick_Handler\000"
+ 3448      69636B5F 
+ 3448      48616E64 
+ 3448      6C657200 
+ 3449              	.LASF75:
+ 3450 055a 6379636C 		.ascii	"cycleCount\000"
+ 3450      65436F75 
+ 3450      6E7400
+ 3451              	.LASF10:
+ 3452 0565 5F5F696E 		.ascii	"__int32_t\000"
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 75
+
+
+ 3452      7433325F 
+ 3452      7400
+ 3453              	.LASF87:
+ 3454 056f 54696D69 		.ascii	"TimingAnalyzer_Pause\000"
+ 3454      6E67416E 
+ 3454      616C797A 
+ 3454      65725F50 
+ 3454      61757365 
+ 3455              	.LASF101:
+ 3456 0584 43795379 		.ascii	"CySysTickInit\000"
+ 3456      73546963 
+ 3456      6B496E69 
+ 3456      7400
+ 3457              	.LASF30:
+ 3458 0592 4C535543 		.ascii	"LSUCNT\000"
+ 3458      4E5400
+ 3459              	.LASF96:
+ 3460 0599 67726565 		.ascii	"greenLedControl\000"
+ 3460      6E4C6564 
+ 3460      436F6E74 
+ 3460      726F6C00 
+ 3461              	.LASF100:
+ 3462 05a9 59656C6C 		.ascii	"Yellow_LED_Write\000"
+ 3462      6F775F4C 
+ 3462      45445F57 
+ 3462      72697465 
+ 3462      00
+ 3463              	.LASF111:
+ 3464 05ba 74696D69 		.ascii	"timingAnalyzer.c\000"
+ 3464      6E67416E 
+ 3464      616C797A 
+ 3464      65722E63 
+ 3464      00
+ 3465              	.LASF85:
+ 3466 05cb 54696D69 		.ascii	"TimingAnalyzer_Start\000"
+ 3466      6E67416E 
+ 3466      616C797A 
+ 3466      65725F53 
+ 3466      74617274 
+ 3467              	.LASF114:
+ 3468 05e0 49544D5F 		.ascii	"ITM_RxBuffer\000"
+ 3468      52784275 
+ 3468      66666572 
+ 3468      00
+ 3469              	.LASF1:
+ 3470 05ed 52435F45 		.ascii	"RC_ERROR\000"
+ 3470      52524F52 
+ 3470      00
+ 3471              	.LASF98:
+ 3472 05f6 5265645F 		.ascii	"Red_LED_Write\000"
+ 3472      4C45445F 
+ 3472      57726974 
+ 3472      6500
+ 3473              	.LASF28:
+ 3474 0604 45584343 		.ascii	"EXCCNT\000"
+ 3474      4E5400
+ 3475              	.LASF59:
+ARM GAS  C:\Users\abhim\AppData\Local\Temp\ccc6Qq8K.s 			page 76
+
+
+ 3476 060b 54696D65 		.ascii	"TimerMode_t\000"
+ 3476      724D6F64 
+ 3476      655F7400 
+ 3477              	.LASF88:
+ 3478 0617 54696D69 		.ascii	"TimingAnalyzer_Resume\000"
+ 3478      6E67416E 
+ 3478      616C797A 
+ 3478      65725F52 
+ 3478      6573756D 
+ 3479              	.LASF29:
+ 3480 062d 534C4545 		.ascii	"SLEEPCNT\000"
+ 3480      50434E54 
+ 3480      00
+ 3481              		.ident	"GCC: (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-bran

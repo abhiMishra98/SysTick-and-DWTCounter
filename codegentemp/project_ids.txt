@@ -1,0 +1,10 @@
+D:\psoc-workspace\Lab Assignments\Workspace01\Assignment01.cydsn\Assignment01.cyprj|aba2316d-cba2-479c-a1ad-66dcda30ff36
+C:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\default\CyAnnotationLibrary\CyAnnotationLibrary.cylib\CyAnnotationLibrary.cyprj|db9094ba-ec19-4ebd-9d2f-4ae130b1af62
+C:\Users\abhim\OneDrive\Documents\PSoC Creator\4.4\Downloads ( 4.4).cylib\Downloads ( 4.4).cyprj|355b0c83-a084-47ac-90f2-b3292ba25785
+C:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibraryupdates\CyComponentLibraryUpdates.cylib\CyComponentLibraryUpdates.cyprj|99e79d3e-b0a4-4f0c-8bd7-1c81ba5f80be
+C:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cycomponentlibrary\CyComponentLibrary.cylib\CyComponentLibrary.cyprj|2e06b47e-2033-4119-8424-eed3dcc8d016
+C:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\cyprimitives\CyPrimitives.cylib\CyPrimitives.cyprj|7ab313f8-ff69-477c-acb3-6cb95564a48e
+D:\psoc-workspace\Lab Assignments\Workspace01\Assignment01Design.cydsn\Assignment01Design.cyprj|475764f6-2dce-485b-90f0-968e73a3a88f
+D:\psoc-workspace\random\SleepTimer_Interrupt_Sleep01.cydsn\SleepTimer_Interrupt_Sleep01.cyprj|28a0b786-2605-46fa-abf2-91b411e48f2f
+C:\Program Files (x86)\Cypress\PSoC Creator\4.4\PSoC Creator\psoc\content\default\CyReferenceLibrary\CyReferenceLibrary.cylib\CyReferenceLibrary.cyprj|486ec207-37b7-455a-b57b-7f62c01a5cd9
+D:\psoc-workspace\random\timerInterrupt.cydsn\timerInterrupt.cyprj|77fdcf3c-a15e-4599-b2b2-cd995ba9c6d7
